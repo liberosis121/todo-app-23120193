@@ -1,0 +1,24 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+*.user
+*.suo
+.vs/
+*.DotSettings.user
+
+# NuGet
+*.nupkg
+packages/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# Dữ liệu runtime (không nộp)
+todo.data.json
+
+# Hệ thống
+Thumbs.db
+.DS_Store
