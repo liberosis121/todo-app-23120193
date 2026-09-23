@@ -38,7 +38,7 @@ Thay cho menu console chỉ gồm văn bản và số thứ tự, ứng dụng s
 - dashboard thống kê tình trạng công việc;
 - biểu đồ tiến độ;
 - bảng dữ liệu có màu sắc và căn chỉnh;
-- logo Figlet và hình minh họa ASCII;
+- logo ký tự block và hình minh họa Task-Bot;
 - giao diện nền sáng theo phong cách retro terminal;
 - màn hình riêng cho từng chức năng.
 
@@ -88,8 +88,8 @@ Thay cho menu console chỉ gồm văn bản và số thứ tự, ứng dụng s
 
 Dashboard gồm:
 
-- logo `TODO` được tạo bằng `FigletText`;
-- hình ASCII Task-Bot;
+- biểu tượng Task-Bot màu vàng và logo `TODO` bằng ký tự block;
+- họa tiết pixel đối xứng theo phong cách game retro;
 - bốn thẻ thống kê;
 - biểu đồ tiến độ;
 - danh sách công việc cần chú ý;
@@ -573,7 +573,7 @@ Các thành phần Spectre.Console được sử dụng:
 - `Table` cho danh sách công việc;
 - `SelectionPrompt<T>` cho menu tương tác;
 - `BreakdownChart` cho biểu đồ tiến độ;
-- `FigletText` cho logo;
+- `Text`, `Grid` và ký tự block cho logo retro;
 - `Markup` và `Style` cho màu sắc;
 - `AnsiConsole.Clear()` để làm mới màn hình;
 - `Markup.Escape()` để dữ liệu người dùng không phá cú pháp hiển thị.

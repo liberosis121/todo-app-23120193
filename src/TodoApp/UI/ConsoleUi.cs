@@ -1,4 +1,5 @@
 using Spectre.Console;
+using Spectre.Console.Rendering;
 using TodoApp.Models;
 using TodoApp.Services;
 using TodoApp.Utils;
@@ -29,6 +30,19 @@ public static class ConsoleUi
     private static readonly Color MutedColor = new(102, 114, 125);
     private static readonly Color SurfaceColor = new(244, 241, 234);
 
+    /// <summary>Chiều rộng nội dung tối đa; chừa lề hai bên để bố cục cân giữa.</summary>
+    private static int ContentWidth => Math.Min(124, Math.Max(64, AnsiConsole.Profile.Width - 8));
+
+    private static void WriteCentered(IRenderable renderable)
+    {
+        // Khóa vùng căn giữa theo cùng ContentWidth. Nếu chỉ Align trực tiếp
+        // một Markup ngắn, một số terminal có thể đo sai viewport và cắt đầu dòng.
+        var content = new Align(renderable, HorizontalAlignment.Center)
+            .Width(ContentWidth);
+        AnsiConsole.Write(new Align(content, HorizontalAlignment.Center));
+        AnsiConsole.WriteLine();
+    }
+
     /// <summary>
     /// Áp dụng nền sáng cho toàn bộ cửa sổ console. Spectre.Console đảm nhiệm
     /// foreground chi tiết; ConsoleColor cung cấp màu nền mặc định.
@@ -55,6 +69,11 @@ public static class ConsoleUi
             // đổi ConsoleColor, mỗi lần Spectre reset ANSI sẽ quay về nền đen.
             AnsiConsole.Background = SurfaceColor;
             AnsiConsole.Foreground = InkColor;
+
+            // Console.SetOut dùng decorator có thể khiến thư viện không tự nhận
+            // đúng kích thước host cũ. Khai báo rõ width để tránh buffer ngang.
+            if (!Console.IsOutputRedirected)
+                AnsiConsole.Profile.Width = Console.WindowWidth;
         }
         catch (IOException)
         {
@@ -95,18 +114,20 @@ public static class ConsoleUi
         // redirect (E2E test, chụp demo): giữ lịch sử để công cụ kiểm tra được output.
         if (!Console.IsOutputRedirected && !Console.IsInputRedirected) AnsiConsole.Clear();
 
-        var heading = new Grid().AddColumn().AddColumn(new GridColumn().RightAligned());
-        heading.AddRow(
+        var heading = new Align(
             new Markup($"[bold {Teal}]✓ TODO DESK[/]  [{Muted}]•[/]  [bold {Ink}]{Markup.Escape(title)}[/]"),
-            new Markup($"[{Muted}]MSSV 23120193[/]"));
-
-        AnsiConsole.Write(new Panel(heading)
+            HorizontalAlignment.Center);
+        var headingPanel = new Panel(heading)
             .Border(BoxBorder.Rounded)
             .BorderColor(TealColor)
-            .Padding(1, 0));
+            .Padding(1, 0);
+        headingPanel.Width = ContentWidth;
+        WriteCentered(headingPanel);
 
         if (!string.IsNullOrWhiteSpace(subtitle))
-            AnsiConsole.MarkupLine($"[{Muted}]{Markup.Escape(subtitle)}[/]\n");
+        {
+            WriteCentered(new Markup($"[{Muted}]{Markup.Escape(subtitle)}[/]"));
+        }
     }
 
     /// <summary>Vẽ dashboard gồm thống kê, tiến độ và các công việc gần nhất.</summary>
@@ -122,6 +143,7 @@ public static class ConsoleUi
         var percent = items.Count == 0 ? 0 : (int)Math.Round(done * 100d / items.Count);
 
         var cards = new Grid()
+            .Width(ContentWidth)
             .AddColumn(new GridColumn().NoWrap())
             .AddColumn(new GridColumn().NoWrap())
             .AddColumn(new GridColumn().NoWrap())
@@ -131,9 +153,11 @@ public static class ConsoleUi
             StatCard("CHƯA XONG", active.ToString(), Gold, GoldColor),
             StatCard("HOÀN THÀNH", done.ToString(), Green, GreenColor),
             StatCard("QUÁ HẠN", overdue.ToString(), Coral, CoralColor));
-        AnsiConsole.Write(cards);
+        WriteCentered(cards);
 
-        var progress = new BreakdownChart().Width(60);
+        // BreakdownChart cần thêm không gian cho label/legend bên dưới. Nếu bar
+        // rộng sát panel, Spectre có thể mở rộng buffer ngang và làm lệch view.
+        var progress = new BreakdownChart().Width(Math.Max(40, ContentWidth - 32));
         if (items.Count == 0)
             progress.AddItem("Chưa có dữ liệu", 1, MutedColor);
         else
@@ -143,10 +167,12 @@ public static class ConsoleUi
             if (overdue > 0) progress.AddItem("Quá hạn", overdue, CoralColor);
         }
 
-        AnsiConsole.Write(new Panel(progress)
+        var progressPanel = new Panel(progress)
             .Header($"[bold] TIẾN ĐỘ {percent}% [/]")
             .Border(BoxBorder.Rounded)
-            .BorderColor(GoldColor));
+            .BorderColor(GoldColor);
+        progressPanel.Width = ContentWidth;
+        WriteCentered(progressPanel);
 
         if (items.Count > 0)
         {
@@ -160,54 +186,105 @@ public static class ConsoleUi
         }
         else
         {
-            AnsiConsole.Write(new Panel(new Markup(
-                    $"[{Muted}]Chưa có công việc nào.[/]\n[bold {Teal}]Hãy chọn “Thêm công việc” để bắt đầu.[/]"))
+            var emptyPanel = new Panel(new Align(new Markup(
+                    $"[{Muted}]Chưa có công việc nào.[/]\n[bold {Teal}]Hãy chọn “Thêm công việc” để bắt đầu.[/]"),
+                    HorizontalAlignment.Center))
                 .Header("[bold] DANH SÁCH TRỐNG [/]")
                 .Border(BoxBorder.Rounded)
-                .BorderColor(TealColor));
+                .BorderColor(TealColor);
+            emptyPanel.Width = Math.Min(64, ContentWidth);
+            WriteCentered(emptyPanel);
         }
 
         if (!string.IsNullOrWhiteSpace(notification))
-            AnsiConsole.Write(new Panel(new Markup($"[green]✓[/] {Markup.Escape(notification)}"))
+        {
+            var noticePanel = new Panel(new Align(
+                    new Markup($"[green]✓[/] {Markup.Escape(notification)}"),
+                    HorizontalAlignment.Center))
                 .Border(BoxBorder.Rounded)
-                .BorderColor(GreenColor));
+                .BorderColor(GreenColor);
+            noticePanel.Width = Math.Min(80, ContentWidth);
+            WriteCentered(noticePanel);
+        }
+
+        RenderFooter();
     }
 
     /// <summary>
-    /// Logo Figlet + mascot ASCII mang phong cách retro game. Chỉ dùng ký tự
-    /// terminal nên không cần ảnh hoặc tài nguyên ngoài.
+    /// Biểu tượng Task-Bot và wordmark TODO dùng ký tự block theo phong cách
+    /// retro game. Bố cục xếp dọc và đối xứng quanh trục giữa màn hình.
     /// </summary>
     private static void RenderHero()
     {
         const string mascot = """
-               .--------------------.
-              /     TODO  DESK     /|
-             /____________________/ |
-             |  [x]  PLAN         | |
-             |  [ ]  DO           | |
-             |  [ ]  REVIEW       | /
-             |____________________|/
-                  \   ^    ^   /
-                   \    --    /
-                    '--------'
+                ▄████████████▄
+                █  ■      ■  █
+                █     ▄▄     █
+                ▀███  TASK ███▀
+                    ▀▀▀▀
             """;
 
-        var logo = new FigletText("TODO")
-            .Color(TealColor)
-            .LeftJustified();
+        const string logo = """
+             ████████╗ ██████╗ ██████╗  ██████╗
+             ╚══██╔══╝██╔═══██╗██╔══██╗██╔═══██╗
+                ██║   ██║   ██║██║  ██║██║   ██║
+                ██║   ╚██████╔╝██████╔╝╚██████╔╝
+                ╚═╝    ╚═════╝ ╚═════╝  ╚═════╝
+            """;
 
-        var art = new Panel(new Text(mascot, new Style(InkColor)))
-            .Header($"[bold {Gold}] ASCII TASK-BOT [/]")
-            .Border(BoxBorder.Double)
-            .BorderColor(GoldColor)
+        const string leftDecoration = """
+            ◆ ───────── ◆
+              ▪  ▫  ▪
+            ╱╲╱╲╱╲╱╲╱╲
+              ▫  ▪  ▫
+            ◆ ───────── ◆
+            """;
+
+        const string rightDecoration = """
+            ◆ ───────── ◆
+              ▪  ▫  ▪
+            ╲╱╲╱╲╱╲╱╲╱
+              ▫  ▪  ▫
+            ◆ ───────── ◆
+            """;
+
+        var center = new Grid().AddColumn(new GridColumn().Centered());
+        center.AddRow(new Text(mascot, new Style(GoldColor, decoration: Decoration.Bold)));
+        center.AddRow(new Text(logo, new Style(TealColor, decoration: Decoration.Bold)));
+
+        if (ContentWidth >= 100)
+        {
+            var hero = new Grid()
+                .Width(Math.Min(112, ContentWidth))
+                .AddColumn(new GridColumn().Width(24).Centered())
+                .AddColumn(new GridColumn().Width(64).Centered())
+                .AddColumn(new GridColumn().Width(24).Centered());
+            hero.AddRow(
+                new Text(leftDecoration, new Style(MutedColor)),
+                center,
+                new Text(rightDecoration, new Style(MutedColor)));
+            WriteCentered(hero);
+        }
+        else
+        {
+            // Cửa sổ hẹp: ưu tiên logo, bỏ họa tiết hai bên để không bị wrap.
+            WriteCentered(center);
+        }
+
+        WriteCentered(new Markup(
+            $"[bold {Green}]MAKE A PLAN.[/]  [bold {Teal}]DO THE WORK.[/]  [bold {Gold}]ENJOY THE WIN.[/]"));
+    }
+
+    private static void RenderFooter()
+    {
+        var footer = new Panel(new Align(
+                new Markup($"[{Muted}]DỰ ÁN ĐƯỢC THỰC HIỆN BỞI[/]  [bold {Ink}]TRẦN KIM YẾN[/]  [{Muted}]• 23120193[/]"),
+                HorizontalAlignment.Center))
+            .Border(BoxBorder.Rounded)
+            .BorderColor(MutedColor)
             .Padding(1, 0);
-
-        var hero = new Grid()
-            .AddColumn(new GridColumn())
-            .AddColumn(new GridColumn().NoWrap());
-        hero.AddRow(logo, art);
-        AnsiConsole.Write(hero);
-        AnsiConsole.MarkupLine($"[bold {Green}]MAKE A PLAN.[/]  [bold {Teal}]DO THE WORK.[/]  [bold {Gold}]ENJOY THE WIN.[/]\n");
+        footer.Width = ContentWidth;
+        WriteCentered(footer);
     }
 
     private static Panel StatCard(string label, string value, string markupColor, Color borderColor) =>
@@ -223,14 +300,16 @@ public static class ConsoleUi
     {
         if (items.Count == 0)
         {
-            AnsiConsole.Write(new Panel($"[{Muted}]Không có công việc phù hợp.[/]")
+            var emptyPanel = new Panel($"[{Muted}]Không có công việc phù hợp.[/]")
                 .Header($"[bold {Teal}] {Markup.Escape(title)} [/]")
-                .BorderColor(TealColor));
+                .BorderColor(TealColor);
+            emptyPanel.Width = Math.Min(64, ContentWidth);
+            WriteCentered(emptyPanel);
             return;
         }
 
         var table = new Table()
-            .Expand()
+            .Width(ContentWidth)
             .Border(TableBorder.Rounded)
             .BorderColor(TealColor)
             .Title($"[bold {Teal}] {Markup.Escape(title)} [/]")
@@ -265,7 +344,7 @@ public static class ConsoleUi
             table.AddRow(cells.ToArray());
         }
 
-        AnsiConsole.Write(table);
+        WriteCentered(table);
     }
 
     /// <summary>Menu TUI dùng phím mũi tên; tự fallback sang nhập số khi test bằng pipe.</summary>
@@ -273,14 +352,64 @@ public static class ConsoleUi
     {
         if (Console.IsInputRedirected) return ReadNumericChoice(choices.Length);
 
-        var selected = AnsiConsole.Prompt(
-            new SelectionPrompt<string>()
-                .Title($"[bold {Teal}]Bạn muốn làm gì tiếp theo?[/]")
-                .PageSize(choices.Length)
-                .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
-                .AddChoices(choices));
+        var selectedIndex = 0;
+        var top = Console.CursorTop;
 
-        return Array.IndexOf(choices, selected) + 1;
+        try
+        {
+            Console.CursorVisible = false;
+
+            while (true)
+            {
+                RenderMainMenu(choices, selectedIndex, top);
+
+                switch (Console.ReadKey(intercept: true).Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        selectedIndex = (selectedIndex - 1 + choices.Length) % choices.Length;
+                        break;
+                    case ConsoleKey.DownArrow:
+                        selectedIndex = (selectedIndex + 1) % choices.Length;
+                        break;
+                    case ConsoleKey.Enter:
+                        return selectedIndex + 1;
+                }
+            }
+        }
+        finally
+        {
+            try { Console.CursorVisible = true; }
+            catch (IOException) { /* Terminal đã đóng. */ }
+        }
+    }
+
+    private static void RenderMainMenu(string[] choices, int selectedIndex, int top)
+    {
+        var menuWidth = Math.Clamp(choices.Max(choice => choice.Length) + 8, 38, 52);
+        var left = Math.Max(0, (Console.WindowWidth - menuWidth) / 2);
+        var title = "Bạn muốn làm gì tiếp theo?";
+        var titleLeft = Math.Max(0, (Console.WindowWidth - title.Length) / 2);
+
+        WriteMenuLine(top, $"{new string(' ', titleLeft)}[bold {Teal}]{title}[/]");
+
+        for (var i = 0; i < choices.Length; i++)
+        {
+            var label = $"{(i == selectedIndex ? "›" : " ")}  {choices[i]}".PadRight(menuWidth);
+            var line = i == selectedIndex
+                ? $"{new string(' ', left)}[bold white on {Teal}]{Markup.Escape(label)}[/]"
+                : $"{new string(' ', left)}[{Ink}]{Markup.Escape(label)}[/]";
+            WriteMenuLine(top + i + 1, line);
+        }
+
+        Console.SetCursorPosition(0, Math.Min(Console.BufferHeight - 1, top + choices.Length + 1));
+    }
+
+    private static void WriteMenuLine(int row, string markup)
+    {
+        Console.SetCursorPosition(0, row);
+        Console.Write(new string(' ', Math.Max(1, Console.WindowWidth - 1)));
+        Console.SetCursorPosition(0, row);
+        AnsiConsole.Markup(markup);
     }
 
     public static TaskFilter PromptFilter()
