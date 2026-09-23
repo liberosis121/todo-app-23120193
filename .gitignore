@@ -19,6 +19,10 @@ packages/
 # Dữ liệu runtime (không nộp)
 todo.data.json
 
+# Công cụ nội bộ + bản nộp
+.demo/
+*.zip
+
 # Hệ thống
 Thumbs.db
 .DS_Store
