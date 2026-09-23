@@ -1,10 +1,12 @@
 # 📝 README — Ứng dụng TODO Console
 
 **Môn học:** Lập trình Windows  
-**MSSV:** 23120193  
+**Mã lớp:** 24/31   
+**Họ và tên sinh viên:** Trần Kim Yến   
+**Mã số sinh viên:** 23120193  
 **Ngôn ngữ / Nền tảng:** C# (.NET 10) — Console Application  
 **Thư viện UI:** Spectre.Console 0.57.2  
-**Kho mã nguồn:** https://github.com/liberosis121/todo-app-23120193
+**Mã nguồn:** https://github.com/liberosis121/todo-app-23120193
 
 ---
 
