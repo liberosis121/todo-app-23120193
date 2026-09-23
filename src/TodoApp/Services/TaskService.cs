@@ -103,6 +103,6 @@ public sealed class TaskService : ITaskService
         _ => _items.ToList()
     };
 
-    /// <summary>Ghi xuống kho sau mỗi thay đổi (fire-and-forget an toàn).</summary>
+    /// <summary>Trả về Task ghi dữ liệu để caller await đến khi lưu hoàn tất.</summary>
     private Task PersistAsync() => _repository.SaveAsync(_items.ToList());
 }

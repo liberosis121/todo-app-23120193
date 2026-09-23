@@ -1,304 +1,908 @@
-# 📝 README — Ứng dụng TODO Console
+﻿# TODO Desk — Ứng dụng quản lý công việc trên Console
 
-**Môn học:** Lập trình Windows  
-**Mã lớp:** 24/31   
-**Họ và tên sinh viên:** Trần Kim Yến   
-**Mã số sinh viên:** 23120193  
-**Ngôn ngữ / Nền tảng:** C# (.NET 10) — Console Application  
-**Thư viện UI:** Spectre.Console 0.57.2  
-**Mã nguồn:** https://github.com/liberosis121/todo-app-23120193
+| Thông tin | Nội dung |
+|---|---|
+| **Môn học** | Lập trình Windows |
+| **Mã lớp** | 24/31 |
+| **Sinh viên** | Trần Kim Yến |
+| **MSSV** | 23120193 |
+| **Ngôn ngữ** | C# 14 / .NET 10 |
+| **Loại ứng dụng** | Console Application — Terminal User Interface (TUI) |
+| **Thư viện giao diện** | Spectre.Console 0.57.2 |
+| **Kiểm thử** | xUnit — 17/17 test vượt qua |
+| **Mã nguồn** | <https://github.com/liberosis121/todo-app-23120193> (đang để private trước khi nộp) |
 
 ---
 
 ## 1. Giới thiệu
 
-Ứng dụng quản lý ghi chú TODO chạy hoàn toàn trên console, có giao diện bảng biểu – màu sắc đẹp mắt và lưu dữ liệu bền vững ra file JSON.
+**TODO Desk** là ứng dụng quản lý ghi chú công việc chạy trên console. Thay vì chỉ in menu chữ và yêu cầu người dùng nhập số, chương trình sử dụng **Terminal User Interface (TUI)** để tạo trải nghiệm gần giống một ứng dụng desktop ngay trong terminal:
 
-### Tính năng
+- menu tương tác bằng phím **↑ / ↓ / Enter**;
+- dashboard gồm các thẻ thống kê Tổng cộng, Chưa xong, Hoàn thành và Quá hạn;
+- biểu đồ tiến độ theo tỷ lệ phần trăm;
+- bảng dữ liệu có viền, màu sắc, căn cột và trạng thái trực quan;
+- mỗi chức năng có màn hình/form riêng;
+- giao diện được làm mới sau thao tác thay vì nối output thành một danh sách dài;
+- dữ liệu tự động lưu ra JSON và được nạp lại ở lần chạy sau.
 
-| # | Chức năng | Mô tả |
-|---|-----------|-------|
-| 1 | Thêm công việc | Tiêu đề, mô tả, mức ưu tiên (Cao/Trung bình/Thấp), hạn hoàn thành |
-| 2 | Xem & lọc danh sách | Lọc: Tất cả / Chưa xong / Đã xong / Quá hạn, hiển thị bảng có màu |
-| 3 | Tìm kiếm | Theo từ khóa trong tiêu đề **và** mô tả, không phân biệt hoa thường |
-| 4 | Đánh dấu hoàn thành | Bật/tắt trạng thái ✓/✗ |
-| 5 | Sửa công việc | Enter để giữ nguyên giá trị cũ |
-| 6 | Xóa công việc | Có xác nhận `y/n` để tránh xóa nhầm |
-| 7 | Lưu file JSON | Tự động ghi sau **mỗi** thao tác, nạp lại khi mở app |
+Ứng dụng vẫn tuân thủ yêu cầu **chạy trên console**, không chuyển sang WinForms/WPF. Spectre.Console chỉ làm đẹp terminal và không thay đổi bản chất của loại project.
 
-### Demo — ảnh chụp màn hình thực tế
+### 1.1. Chức năng chính
 
-**Màn hình khởi động** (banner Figlet, bảng thống kê, menu, quy trình thêm công việc):
+| # | Chức năng | Chi tiết |
+|---:|---|---|
+| 1 | Thêm công việc | Nhập tiêu đề, mô tả, mức ưu tiên và ngày hết hạn |
+| 2 | Xem danh sách | Hiển thị bảng đầy đủ trạng thái, ưu tiên, tiêu đề, hạn chót và mô tả |
+| 3 | Lọc dữ liệu | Tất cả / Chưa hoàn thành / Đã hoàn thành / Quá hạn |
+| 4 | Tìm kiếm | Tìm trong tiêu đề và mô tả, không phân biệt chữ hoa–thường |
+| 5 | Đổi trạng thái | Chuyển qua lại giữa Chưa xong ↔ Đã xong |
+| 6 | Chỉnh sửa | Thay đổi tiêu đề, mô tả, mức ưu tiên và hạn chót |
+| 7 | Xóa | Chọn task và xác nhận trước khi xóa |
+| 8 | Lưu bền vững | Tự lưu JSON sau mỗi thay đổi và nạp dữ liệu khi khởi động |
+| 9 | Xử lý quá hạn | Tự tính theo ngày hiện tại; không xem task đã hoàn thành là quá hạn |
+| 10 | Thoát an toàn | Hỗ trợ Ctrl+C, cancellation và lưu dữ liệu trong `finally` |
 
-![Demo khởi động — banner, menu, thêm công việc](docs/demo-01-start.png)
+### 1.2. Ảnh chụp giao diện thực tế
 
-**Bảng danh sách + trạng thái** (✓ đã xong, ✗ chưa xong; ngày quá hạn hiển thị đỏ, ô thống kê cập nhật theo thời gian thực):
+**Dashboard và menu tương tác bằng phím ↑/↓/Enter:**
 
-![Demo bảng danh sách công việc](docs/demo-02-table.png)
+![Dashboard TODO Desk](docs/demo-01-start.png)
 
-### Cách chạy
+**Bảng công việc, thống kê và biểu đồ tiến độ:**
 
-```bash
-# Yêu cầu: .NET SDK 10.0 trở lên (Visual Studio 2022/2026 đều được)
+![Bảng danh sách TODO Desk](docs/demo-02-table.png)
+
+Trong ảnh thứ hai:
+
+- task hoàn thành được hiển thị màu xanh và gạch ngang;
+- task quá hạn có ngày màu đỏ kèm ký hiệu cảnh báo;
+- mức ưu tiên Cao / Trung bình / Thấp có màu riêng;
+- dashboard hiển thị 4 task, 1 task hoàn thành, 3 task chưa xong và 1 task quá hạn;
+- biểu đồ tiến độ hiển thị 25% hoàn thành.
+
+---
+
+## 2. Cài đặt và chạy chương trình
+
+### 2.1. Yêu cầu môi trường
+
+- Windows 10/11;
+- Visual Studio có workload **.NET Desktop Development**, hoặc .NET SDK 10.0 trở lên;
+- terminal hỗ trợ UTF-8, khuyến nghị Windows Terminal.
+
+Kiểm tra phiên bản SDK:
+
+```powershell
+dotnet --version
+```
+
+### 2.2. Chạy bằng Visual Studio
+
+1. Mở `TodoApp.sln`.
+2. Chọn `TodoApp` làm Startup Project.
+3. Nhấn **F5** hoặc **Ctrl+F5**.
+4. Dùng **↑ / ↓** để chọn chức năng và nhấn **Enter**.
+
+### 2.3. Chạy bằng dòng lệnh
+
+```powershell
 dotnet restore
 dotnet build TodoApp.sln
 dotnet run --project src/TodoApp
 ```
 
-- Mở bằng Visual Studio: mở file `TodoApp.sln` → **F5**.
-- Chạy unit test: `dotnet test TodoApp.sln` → **17/17 test PASSED**.
-- Dữ liệu lưu tại `src/TodoApp/bin/Debug/net10.0/todo.data.json` (cùng thư mục file `.exe` khi publish).
+### 2.4. Chạy kiểm thử
+
+```powershell
+dotnet test TodoApp.sln
+```
+
+Kết quả tại thời điểm hoàn thành bài:
+
+```text
+Passed! - Failed: 0, Passed: 17, Skipped: 0, Total: 17
+Build succeeded. 0 Warning(s), 0 Error(s)
+```
+
+### 2.5. File dữ liệu
+
+Khi chạy Debug, dữ liệu được lưu tại:
+
+```text
+src/TodoApp/bin/Debug/net10.0/todo.data.json
+```
+
+Khi publish, file nằm cùng thư mục với executable. File này được tạo tự động, không cần tạo thủ công.
 
 ---
 
-## 2. Bảng truy vết: Yêu cầu → Mã nguồn
+## 3. Kiến trúc mã nguồn
 
-> Giúp đối chiếu nhanh từng tiêu chí đề bài với đúng file/method xử lý.
+### 3.1. Tổ chức theo trách nhiệm
 
-| # | Yêu cầu của đề bài | Nơi xử lý trong mã nguồn |
-|---|---------------------|---------------------------|
-| 1 | Chương trình ghi chú TODO chạy trên console | `src/TodoApp/Program.cs` (top-level statements), `UI/MainMenu.cs` (vòng lặp menu) |
-| 2 | Tạo/thêm ghi chú | `TaskService.AddAsync()` ← `UI/MainMenu.AddTaskAsync()` |
-| 3 | Hiển thị danh sách | `UI/ConsoleUi.RenderTasks()` (bảng Spectre `Table`) |
-| 4 | Đánh dấu hoàn thành | `TaskService.ToggleDoneAsync()` ← menu 4 |
-| 5 | Sửa ghi chú | `TaskService.UpdateAsync()` ← menu 5 (Enter = giữ giá trị cũ) |
-| 6 | Xóa ghi chú | `TaskService.RemoveAsync()` ← menu 6 (xác nhận `y/n`) |
-| 7 | Tìm kiếm / lọc theo trạng thái | `TaskService.Search()` (LINQ `Where`), `TaskService.Filter()` (switch expression) |
-| 8 | Lưu trữ dữ liệu bền vững | `Data/JsonTaskRepository.cs` (`System.Text.Json`, ghi atomic qua file `.tmp`) |
-| 9 | Kiểm tra đầu vào hợp lệ | `Utils/InputValidator.cs` (ngày/số/chuỗi rỗng), `Utils/ConsoleInput.cs` (EOF) |
-| 10 | Kỹ thuật C# tổng kết | Mục 4 của readme này |
-| 11 | 3 điểm cải tiến | Mục 6 của readme này |
-| 12 | Unit test (chứng minh chất lượng) | `tests/TodoApp.Tests/` — 17 test, `dotnet test` |
-
----
-
-## 3. Kiến trúc
-
-Áp dụng **chia lớp 3 tầng** + **Dependency Inversion**: giao diện phụ thuộc vào nghiệp vụ, nghiệp vụ phụ thuộc vào hợp đồng lưu trữ — không lớp nào bị "cố định" vào chi tiết kỹ thuật.
-
-```
-┌─────────────────────────────────────────────┐
-│  UI/         MainMenu, ConsoleUi            │  ← biết Spectre.Console
-├─────────────────────────────────────────────┤
-│  Services/   ITaskService, TaskService      │  ← thuần nghiệp vụ, KHÔNG đụng Console
-├─────────────────────────────────────────────┤
-│  Data/       ITaskRepository,               │  ← hợp đồng lưu trữ
-│              JsonTaskRepository             │  ← hiện thực JSON (thay bằng SQLite được ngay)
-├─────────────────────────────────────────────┤
-│  Models/     TaskItem, TaskPriority         │  ← Entity thuần dữ liệu
-│  Utils/      InputValidator, ConsoleInput   │  ← extension method + validate input
-└─────────────────────────────────────────────┘
-              ▲
-   Program.cs (Composition Root: new cụ thể → giao cho interface)
+```text
+┌──────────────────────────────────────────────────────┐
+│ Presentation / UI                                   │
+│ MainMenu, ConsoleUi                                 │
+│ Điều hướng màn hình, TUI, bảng, panel, prompt       │
+├──────────────────────────────────────────────────────┤
+│ Application / Business                              │
+│ ITaskService, TaskService                           │
+│ Thêm, sửa, xóa, toggle, tìm kiếm, lọc               │
+├──────────────────────────────────────────────────────┤
+│ Data Access                                         │
+│ ITaskRepository, JsonTaskRepository                 │
+│ Serialize, deserialize, file I/O, atomic write      │
+├──────────────────────────────────────────────────────┤
+│ Domain / Model                                      │
+│ TaskItem, TaskPriority, TaskFilter                  │
+│ Dữ liệu và quy tắc trạng thái/quá hạn               │
+├──────────────────────────────────────────────────────┤
+│ Cross-cutting Utilities                             │
+│ InputValidator, ConsoleInput, StringExtensions      │
+│ Validate, chuẩn hóa chuỗi, xử lý EOF                │
+└──────────────────────────────────────────────────────┘
+                         ▲
+             Program.cs — Composition Root
 ```
 
-**Cấu trúc thư mục:**
+Luồng xử lý của một thao tác:
 
+```text
+Người dùng
+   ↓
+MainMenu / ConsoleUi
+   ↓ gọi interface
+ITaskService → TaskService
+   ↓ gọi interface
+ITaskRepository → JsonTaskRepository
+   ↓
+todo.data.json
 ```
+
+Tầng `TaskService` **không biết** Spectre.Console, `Console.ReadLine()` hay JSON. Nhờ vậy nghiệp vụ có thể được test bằng repository giả lập trong bộ nhớ.
+
+### 3.2. Cấu trúc thư mục
+
+```text
+TODO App/
 ├── TodoApp.sln
 ├── readme.md
-├── docs/                          # ảnh demo
+├── docs/
+│   ├── demo-01-start.png
+│   └── demo-02-table.png
 ├── src/TodoApp/
-│   ├── Program.cs                 # Top-level statements + wiring DI thủ công
-│   ├── Models/TaskItem.cs         # Entity + Enum
-│   ├── Data/ITaskRepository.cs    # Interface lưu trữ (DIP)
-│   ├── Data/JsonTaskRepository.cs # System.Text.Json + ghi atomic
-│   ├── Services/ITaskService.cs   # Hợp đồng nghiệp vụ
-│   ├── Services/TaskService.cs    # add/update/toggle/remove/search/filter
-│   ├── UI/ConsoleUi.cs            # Bảng, màu, prompt (bọc Spectre.Console)
-│   ├── UI/MainMenu.cs             # Vòng lặp menu + dispatch
-│   └── Utils/                     # Extension method + validate + EOF
-└── tests/TodoApp.Tests/           # xUnit: 17 test
-    ├── Fakes/InMemoryTaskRepository.cs
+│   ├── Program.cs
+│   ├── TodoApp.csproj
+│   ├── Models/
+│   │   └── TaskItem.cs
+│   ├── Data/
+│   │   ├── ITaskRepository.cs
+│   │   └── JsonTaskRepository.cs
+│   ├── Services/
+│   │   ├── ITaskService.cs
+│   │   └── TaskService.cs
+│   ├── UI/
+│   │   ├── ConsoleUi.cs
+│   │   └── MainMenu.cs
+│   └── Utils/
+│       ├── ConsoleInput.cs
+│       └── InputValidator.cs
+└── tests/TodoApp.Tests/
+    ├── Fakes/
+    │   └── InMemoryTaskRepository.cs
     ├── TaskServiceTests.cs
     └── JsonTaskRepositoryTests.cs
 ```
 
+### 3.3. Bảng truy vết yêu cầu → mã nguồn
+
+| Yêu cầu | Thành phần thực hiện |
+|---|---|
+| App TODO chạy trên console | `Program.cs`, `UI/MainMenu.cs` |
+| Giao diện dashboard/TUI | `UI/ConsoleUi.Dashboard()`, `BeginView()`, `MainMenu()` |
+| Thêm task | `MainMenu.AddTaskAsync()` → `TaskService.AddAsync()` |
+| Hiển thị task | `ConsoleUi.RenderTasks()` |
+| Đánh dấu hoàn thành | `MainMenu.ToggleTaskAsync()` → `TaskService.ToggleDoneAsync()` |
+| Chỉnh sửa | `MainMenu.EditTaskAsync()` → `TaskService.UpdateAsync()` |
+| Xóa có xác nhận | `MainMenu.RemoveTaskAsync()` → `ConsoleUi.Confirm()` → `TaskService.RemoveAsync()` |
+| Tìm kiếm | `TaskService.Search()` dùng LINQ |
+| Lọc trạng thái | `TaskService.Filter()` dùng switch expression |
+| Kiểm tra quá hạn | `TaskItem.IsOverdue()` |
+| Lưu và đọc JSON | `JsonTaskRepository.SaveAsync()` / `LoadAsync()` |
+| Validate input | `InputValidator.cs` |
+| Xử lý hết stream nhập | `ConsoleInput.cs` |
+| Unit test | `tests/TodoApp.Tests/` |
+
 ---
 
-## 4. Tổng kết các kỹ thuật C# đã học
+## 4. Tổng kết chi tiết các kỹ thuật C# học được
 
-| # | Kỹ thuật | Áp dụng cụ thể trong mã nguồn |
-|---|----------|--------------------------------|
-| 1 | **Dependency Inversion (DIP) qua Interface** | `TaskService` chỉ nhận `ITaskRepository` qua constructor; `Program.cs` là composition root duy nhất `new` lớp cụ thể. |
-| 2 | **Dependency Injection thủ công** | `ITaskRepository repository = new JsonTaskRepository(); ITaskService service = new TaskService(repository);` — tiêm qua constructor thay vì `new` rải rác. |
-| 3 | **async/await + Task\<T\>** | `AddAsync`, `UpdateAsync`, `LoadAsync`, `SaveAsync` chạy I/O bất đồng bộ; UI `await` tuần tự từng thao tác. |
-| 4 | **CancellationToken** | `InitializeAsync(ct)` và handler menu nhận `ct`; bắt `Ctrl+C` qua `Console.CancelKeyPress` → dừng mềm, ghi dữ liệu trong `finally`. |
-| 5 | **LINQ** (`Where`, `OrderBy`, `FirstOrDefault`, `Count`, `Select`) | Tìm kiếm: `_items.Where(t => t.Title.ToLowerInvariant().Contains(key))`; lọc trả về `Where(...).ToList()`. |
-| 6 | **System.Text.Json + attribute** | `JsonSerializer.SerializeAsync`, `WriteIndented`, `JsonStringEnumConverter` (lưu `"High"` thay vì `2`), `JsonIgnore` cho thuộc tính tính toán. |
-| 7 | **Enum + switch expression** | `TaskPriority` (Low/Medium/High) và `TaskFilter`; đổi màu/label bằng `switch { ... => ... }`. |
-| 8 | **Generic & Collection** | `List<TaskItem>` chứa dữ liệu, trả về `IReadOnlyList<TaskItem>` cho UI (không cho sửa ngoài ý muốn). |
-| 9 | **Extension Method** | `text.OneLine()`, `text.Length0()` trong `StringExtensions` — gọi tiện lợi ở mọi nơi, không cần lặp `?? ""` + `.Trim()`. |
-| 10 | **Class + sealed class + Entity** | `TaskItem` là entity thuần dữ liệu; `sealed class TaskService` ngăn kế thừa ngoài ý muốn. |
-| 11 | **XML Documentation Comment (`///`)** | Toàn bộ public API có `<summary>` → IntelliSense gợi ý khi gõ. |
-| 12 | **Nullable Reference Types + ImplicitUsings** | `<Nullable>enable</Nullable>`: bắt sớm `NullReferenceException` ngay lúc build (0 warning). |
-| 13 | **try-catch lọc ngoại lệ (`when`)** | `catch (Exception ex) when (ex is JsonException or IOException ...)` — bắt đúng nhóm lỗi file hỏng thay vì nuốt mọi lỗi. |
-| 14 | **Ghi file atomic (write-temp-then-move)** | Serialize ra `.tmp` rồi `File.Move(overwrite:true)` → không mất dữ liệu nếu mất điện giữa chừng. |
-| 15 | **Top-level statements** | `Program.cs` không cần `Main`/`class` — code khởi động gọn trên đầu file. |
-| 16 | **String interpolation + Escape** | `$"{label} [{current}]:"`, `Markup.Escape(...)` để text người dùng không phá markup màu của Spectre. |
-| 17 | **Console Unicode/UTF-8** | `Console.OutputEncoding = Encoding.UTF8` để dấu tiếng Việt và ký tự ✓/✗ hiển thị đúng trên Windows. |
-| 18 | **Defensive programming với EOF** | `ConsoleInput.ReadLine()` phát hiện hết nhập liệu → trả `null`, vòng lặp menu thoát sạch thay vì quay vô hạn. |
-| 19 | **Spectre.Console API** | `Table` + `TableColumn.Centered()`, `FigletText`, `Panel`, `Rule`, `Markup`, `AnsiConsole`. |
-| 20 | **Composition Root pattern** | Toàn bộ `new` cụ thể nằm duy nhất trong `Program.cs`; file khác chỉ khai báo interface. |
-| 21 | **Unit Testing (xUnit) + Fake/Mock repository** | 17 test bọc `TaskService` bằng `InMemoryTaskRepository` → test nghiệp vụ không đụng file system. |
-| 22 | **IDisposable + cleanup** | Test repository tự dọn file tạm trong `Dispose()`; `CancellationTokenSource` dùng `using`. |
+> Đây là phần tổng kết kiến thức rút ra trực tiếp từ mã nguồn, không chỉ liệt kê tên kỹ thuật.
 
-### Ví dụ tiêu biểu
+### 4.1. Lập trình hướng đối tượng và mô hình hóa domain
 
-**1. Dependency Inversion (DIP) — `TaskService.cs`:**
+`TaskItem` biểu diễn một công việc trong hệ thống. Mỗi object chứa cả dữ liệu và hành vi liên quan trực tiếp đến dữ liệu đó:
 
 ```csharp
+public sealed class TaskItem
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = string.Empty;
+    public TaskPriority Priority { get; set; }
+    public DateOnly? DueDate { get; set; }
+    public bool IsDone { get; set; }
+
+    public bool IsOverdue(DateTime? today = null)
+    {
+        if (IsDone || DueDate is null) return false;
+        return DueDate.Value.ToDateTime(TimeOnly.MinValue) < (today ?? DateTime.Today).Date;
+    }
+}
+```
+
+**Kiến thức học được:**
+
+- class dùng để gom trạng thái và hành vi thành một đơn vị;
+- `sealed` thể hiện chủ đích không cho kế thừa tùy ý;
+- giá trị mặc định giúp object luôn ở trạng thái hợp lệ cơ bản;
+- quy tắc “task đã hoàn thành thì không còn quá hạn” nằm trong model thay vì bị lặp ở UI;
+- method nhận `today` tùy chọn giúp logic thời gian dễ kiểm thử hơn.
+
+### 4.2. Enum và switch expression
+
+Mức ưu tiên và trạng thái lọc là tập giá trị hữu hạn, nên được biểu diễn bằng `enum` thay vì string:
+
+```csharp
+public enum TaskPriority { Low, Medium, High }
+public enum TaskFilter { All, Active, Done, Overdue }
+```
+
+Lọc dữ liệu sử dụng switch expression:
+
+```csharp
+public IReadOnlyList<TaskItem> Filter(TaskFilter filter) => filter switch
+{
+    TaskFilter.Active  => _items.Where(t => !t.IsDone).ToList(),
+    TaskFilter.Done    => _items.Where(t => t.IsDone).ToList(),
+    TaskFilter.Overdue => _items.Where(t => t.IsOverdue()).ToList(),
+    _                  => _items.ToList()
+};
+```
+
+**Kiến thức học được:** enum an toàn kiểu hơn string, tránh lỗi gõ sai như `"Hight"`; switch expression ngắn gọn, buộc từng nhánh trả về cùng kiểu và dễ mở rộng.
+
+### 4.3. Interface và Dependency Inversion Principle
+
+`TaskService` không phụ thuộc trực tiếp vào `JsonTaskRepository`. Nó chỉ phụ thuộc vào hợp đồng:
+
+```csharp
+public interface ITaskRepository
+{
+    Task<IReadOnlyList<TaskItem>> LoadAsync(CancellationToken ct = default);
+    Task SaveAsync(IReadOnlyList<TaskItem> items, CancellationToken ct = default);
+}
+
 public sealed class TaskService : ITaskService
 {
-    private readonly ITaskRepository _repository;   // phụ thuộc vào HỢP ĐỒNG
+    private readonly ITaskRepository _repository;
 
     public TaskService(ITaskRepository repository)
-        => _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        => _repository = repository
+            ?? throw new ArgumentNullException(nameof(repository));
 }
 ```
 
-**2. LINQ tìm kiếm không phân biệt hoa thường:**
+**Kiến thức học được:**
+
+- interface mô tả **điều đối tượng làm được**, không mô tả chi tiết cách làm;
+- tầng nghiệp vụ phụ thuộc abstraction, không phụ thuộc file JSON cụ thể;
+- có thể thay JSON bằng SQLite, SQL Server hoặc API mà không sửa thuật toán tìm/lọc;
+- trong unit test có thể tiêm `InMemoryTaskRepository`, giúp test chạy nhanh và độc lập file system.
+
+Đây là cách áp dụng thực tế chữ **D** trong SOLID — Dependency Inversion.
+
+### 4.4. Constructor Injection và Composition Root
+
+Các phụ thuộc được truyền vào constructor thay vì tạo bằng `new` bên trong service:
 
 ```csharp
-public IReadOnlyList<TaskItem> Search(string keyword)
-{
-    var key = keyword.OneLine().ToLowerInvariant();
-    return _items
-        .Where(t => t.Title.ToLowerInvariant().Contains(key)
-                 || t.Description.ToLowerInvariant().Contains(key))
-        .OrderBy(t => t.IsDone)
-        .ThenByDescending(t => t.Priority)
-        .ToList();
-}
+ITaskRepository repository = new JsonTaskRepository();
+ITaskService service = new TaskService(repository);
+var menu = new MainMenu(service);
 ```
 
-**3. Async I/O + ghi file atomic:**
+Toàn bộ việc nối object nằm trong `Program.cs`, còn gọi là **Composition Root**.
+
+**Kiến thức học được:**
+
+- dễ nhìn thấy dependency graph;
+- giảm coupling;
+- test có thể thay implementation;
+- tránh Service Locator và biến static toàn cục;
+- khi project lớn hơn có thể chuyển sang DI container mà không đổi thiết kế các lớp.
+
+### 4.5. Separation of Concerns và kiến trúc phân tầng
+
+Mỗi lớp có một lý do thay đổi:
+
+| Lớp | Trách nhiệm |
+|---|---|
+| `TaskItem` | Dữ liệu và quy tắc trạng thái |
+| `TaskService` | Nghiệp vụ CRUD, tìm kiếm, lọc |
+| `JsonTaskRepository` | Đọc/ghi JSON |
+| `ConsoleUi` | Render dashboard, bảng, màu, prompt |
+| `MainMenu` | Điều hướng và phối hợp use case |
+| `InputValidator` | Kiểm tra input |
+
+**Kiến thức học được:** không đặt toàn bộ code trong `Program.cs`. Việc tách trách nhiệm giúp đọc code nhanh hơn, giảm ảnh hưởng khi thay đổi và cho phép test từng phần.
+
+### 4.6. Generic collections và chỉ đọc dữ liệu
+
+Dữ liệu nội bộ dùng `List<TaskItem>`, nhưng service chỉ công khai `IReadOnlyList<TaskItem>`:
 
 ```csharp
-public async Task SaveAsync(IReadOnlyList<TaskItem> items, CancellationToken ct = default)
-{
-    var temp = _path + ".tmp";
-    await using (var stream = File.Create(temp))
-        await JsonSerializer.SerializeAsync(stream, items, Options, ct);
-
-    File.Move(temp, _path, overwrite: true);   // thay thế an toàn
-}
+private readonly List<TaskItem> _items = new();
+public IReadOnlyList<TaskItem> Items => _items;
 ```
 
-**4. Extension Method:**
+**Kiến thức học được:**
+
+- `List<T>` cung cấp collection mạnh và an toàn kiểu;
+- generic tránh ép kiểu từ `object`;
+- `IReadOnlyList<T>` giới hạn quyền của caller: UI có thể đọc nhưng không thể gọi `Add`/`Remove` trực tiếp;
+- mọi thay đổi phải đi qua service, nên luôn chạy nghiệp vụ và lưu file đúng quy trình.
+
+### 4.7. LINQ để truy vấn collection
+
+Tìm kiếm, sắp xếp và thống kê được viết theo dạng pipeline:
 
 ```csharp
-public static class StringExtensions
-{
-    public static string OneLine(this string? text) => (text ?? string.Empty).Trim();
-    public static int  Length0 (this string? text) => text.OneLine().Length;
-}
+return _items
+    .Where(t => t.Title.ToLowerInvariant().Contains(key)
+             || t.Description.ToLowerInvariant().Contains(key))
+    .OrderBy(t => t.IsDone)
+    .ThenByDescending(t => t.Priority)
+    .ToList();
 ```
 
-**5. Bắt Ctrl+C + luôn ghi dữ liệu khi thoát — `Program.cs`:**
+Dashboard cũng dùng `Count`, `OrderBy`, `ThenBy`, `Take`.
+
+**Kiến thức học được:**
+
+- `Where` lọc dữ liệu;
+- `OrderBy` và `ThenBy` sắp xếp nhiều cấp;
+- `FirstOrDefault` trả về `null` nếu không tìm thấy;
+- `Take` giới hạn danh sách preview;
+- LINQ mô tả “muốn dữ liệu gì” rõ hơn vòng `for` thủ công.
+
+### 4.8. async/await và I/O bất đồng bộ
+
+Repository đọc/ghi JSON bằng API bất đồng bộ:
+
+```csharp
+await using var stream = File.OpenRead(_path);
+var items = await JsonSerializer.DeserializeAsync<List<TaskItem>>(
+    stream, Options, ct);
+```
+
+Service chờ lưu hoàn tất trước khi trả kết quả:
+
+```csharp
+_items.Add(item);
+await PersistAsync();
+return item;
+```
+
+**Kiến thức học được:**
+
+- `Task` đại diện cho một thao tác chưa hoàn tất;
+- `Task<T>` trả về kết quả bất đồng bộ;
+- `await` không khóa thread trong thời gian chờ I/O;
+- async nên được truyền xuyên suốt call chain, không dùng `.Result`/`.Wait()`;
+- không dùng “fire-and-forget” cho thao tác lưu quan trọng vì có thể mất dữ liệu hoặc nuốt exception.
+
+### 4.9. CancellationToken và xử lý Ctrl+C
 
 ```csharp
 using var cts = new CancellationTokenSource();
-Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-
-try { await service.InitializeAsync(cts.Token); await menu.RunAsync(cts.Token); }
-finally { await repository.SaveAsync(service.Items, CancellationToken.None); }
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
 ```
 
----
+Token được truyền vào khâu khởi tạo và repository. `OperationCanceledException` được xử lý riêng.
 
-## 5. Kiểm thử (Unit Test)
+**Kiến thức học được:** cancellation là cơ chế hủy **hợp tác**. Code không bị kill đột ngột mà nhận tín hiệu, dừng ở điểm an toàn và chạy cleanup.
 
-```bash
-dotnet test TodoApp.sln
-# Passed! - Failed: 0, Passed: 17, Skipped: 0, Total: 17
-```
+### 4.10. try/catch/finally và exception filter
 
-| Lớp test | Số test | Phủ những gì |
-|----------|---------|--------------|
-| `TaskServiceTests` | 13 | Thêm (kèm trim/độ đúng thứ tự), toggle, sửa (kèm `UpdatedAt`), xóa, tìm kiếm LINQ, lọc Active/Done/Overdue, nạp dữ liệu |
-| `JsonTaskRepositoryTests` | 5 | Round-trip đủ mọi trường, enum lưu dạng chuỗi, **file hỏng không làm app sập**, ghi đè, file chưa tồn tại |
-| `Fakes/InMemoryTaskRepository` | – | Fake repository cho phép test nghiệp vụ **không cần file system** (chứng minh DIP hoạt động thật) |
-
-Điểm đáng chú ý: 2 lần chạy test đầu tiên phát hiện **kỳ vọng test sai** (không phải lỗi app) — hành vi sửa test theo đúng hành vi thực tế của code cho thấy test được viết/tiết chỉnh nghiêm túc, không phải "viết cho có".
-
----
-
-## 6. Ba (3) điểm cải tiến chất lượng mã nguồn
-
-> Định hướng: **kỹ thuật phần mềm** — làm cho mã nguồn dễ thay đổi, dễ kiểm chứng và khó hỏng hơn.
-
-### ① Thay DI thủ công bằng container `Microsoft.Extensions.DependencyInjection`
-
-**Hiện tại:** `Program.cs` tự `new` từng đối tượng — giờ vẫn chạy tốt, nhưng khi dự án có 10–15 dịch vụ thì việc sắp thứ tự khởi tạo, giải phóng (`IDisposable`) và sửa constructor sẽ rất dễ sai.
-
-**Cải tiến:**
+Repository chỉ bắt những lỗi mà nó biết cách phục hồi:
 
 ```csharp
-var services = new ServiceCollection()
-    .AddSingleton<ITaskRepository, JsonTaskRepository>()
-    .AddSingleton<ITaskService, TaskService>()
-    .AddSingleton<MainMenu>()
-    .BuildServiceProvider();
+catch (Exception ex) when (
+    ex is JsonException or IOException or UnauthorizedAccessException)
+{
+    Console.WriteLine("Không đọc được file dữ liệu...");
+    return Array.Empty<TaskItem>();
+}
 ```
 
-**Lợi ích:** muốn đổi sang SQLite chỉ sửa **1 dòng đăng ký**; hỗ trợ `IDisposable`/`IHostedService` tự dọn dẹp; test dễ hơn nhờ `.Replace()` một registration.
+`Program.cs` luôn thử lưu trong `finally`:
 
-### ② Đổi hiện thực lưu trữ mà không sửa dòng nào ở tầng nghiệp vụ (OCP + Repository)
+```csharp
+finally
+{
+    await repository.SaveAsync(service.Items, CancellationToken.None);
+}
+```
 
-**Hiện tại:** `JsonTaskRepository` đã tách sau `ITaskRepository`, nhưng mới chỉ có 1 hiện thực và hợp đồng chưa được kiểm chứng bằng test hồi quy.
+**Kiến thức học được:**
 
-**Cải tiến:**
+- không nên `catch (Exception) { }` rồi bỏ qua lỗi;
+- exception filter giúp bắt đúng nhóm có thể xử lý;
+- `finally` chạy cả khi thành công, lỗi hoặc cancellation;
+- lỗi kỹ thuật được chuyển thành thông báo dễ hiểu thay vì làm app crash với stack trace.
 
-- Bổ sung **xUnit test** cho `TaskService` với `FakeTaskRepository` (in-memory) → kiểm chứng add/toggle/remove/search **không cần** đụng file, chạy < 1 giây trong CI. ✅ *đã thực hiện một phần ở mục 5*
-- Thêm `SqliteTaskRepository`/`HttpTaskRepository` cạnh tranh với bản JSON → chỉ đổi registration trong composition root.
-- Thêm **UnitOfWork** (`IUnitOfWork.SaveChangesAsync()`) để ghi **nhiều thay đổi một lần** thay vì ghi file sau mỗi thao tác → giảm I/O, đảm bảo nguyên tử khi sửa nhiều task trong 1 phiên làm việc.
+### 4.11. System.Text.Json và cấu hình serialization
 
-**Lợi ích:** tuân thủ **Open/Closed Principle** và **Dependency Inversion** đúng nghĩa; độ phủ test tăng, refactoring không còn sợ vỡ chức năng cũ.
+```csharp
+private static readonly JsonSerializerOptions Options = new()
+{
+    WriteIndented = true,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    Converters = { new JsonStringEnumConverter() },
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+};
+```
 
-### ③ Luồng async/await end-to-end + `CancellationToken` truyền suốt + chống ghi đè
+**Kiến thức học được:**
 
-**Hiện tại:** mỗi thao tác `await` một lần, nhưng `CancellationToken` mới chỉ truyền ở khâu khởi động và menu.
+- serialize chuyển object thành JSON; deserialize thực hiện chiều ngược lại;
+- camelCase phù hợp quy ước JSON;
+- enum dạng chuỗi (`"High"`) dễ đọc hơn số (`2`);
+- `JsonIgnore` loại thuộc tính tính toán khỏi file;
+- `WriteIndented` giúp dễ kiểm tra dữ liệu trong bài học.
 
-**Cải tiến:**
+### 4.12. Ghi file atomic để giảm nguy cơ hỏng dữ liệu
 
-- Truyền `ct` xuống **từng** method của `TaskService`/`ITaskRepository` → người dùng bấm `Ctrl+C` giữa chừng đang lưu thì thao tác hủy ngay, không treo process.
-- Thêm **chống ghi đè (optimistic concurrency)**: lưu `UpdatedAt` + `Version` khi đọc, so lại khi ghi — nếu 2 tiến trình mở app cùng lúc thì phát hiện xung đột và báo người dùng thay vì lặng lẽ ghi đè dữ liệu của nhào.
-- Bọc bằng `try/catch` + **retry policy** cho lỗi I/O tạm thời (file bị lock do antivirus…).
+Chương trình không ghi trực tiếp đè lên file chính:
 
-**Lợi ích:** app phản hồi nhanh, **không mất/ghi đè dữ liệu** — đây là lỗi phổ biến nhất của các bài console lưu file.
+```csharp
+var temp = _path + ".tmp";
+await using (var stream = File.Create(temp))
+{
+    await JsonSerializer.SerializeAsync(stream, items, Options, ct);
+}
+File.Move(temp, _path, overwrite: true);
+```
+
+**Kiến thức học được:** nếu tiến trình bị dừng giữa lúc serialize, file chính cũ vẫn còn nguyên. Chỉ sau khi ghi file tạm thành công mới thay file chính. Đây là kỹ thuật **write-temp-then-replace**.
+
+### 4.13. Nullable Reference Types
+
+Project bật:
+
+```xml
+<Nullable>enable</Nullable>
+```
+
+Các giá trị tùy chọn được biểu diễn rõ bằng `string?`, `DateOnly?`, `TaskItem?`.
+
+**Kiến thức học được:** compiler phân tích null tại thời điểm build, buộc lập trình viên xử lý trường hợp không có giá trị và giảm `NullReferenceException` lúc chạy.
+
+### 4.14. Extension methods và chuẩn hóa input
+
+```csharp
+public static string OneLine(this string? text)
+    => (text ?? string.Empty).Trim();
+
+public static int Length0(this string? text)
+    => text.OneLine().Length;
+```
+
+**Kiến thức học được:** từ khóa `this` ở tham số đầu tạo cú pháp gọi tự nhiên như `value.OneLine()`. Logic null + trim chỉ viết một lần và dùng nhất quán.
+
+### 4.15. Kiểu dữ liệu phù hợp: Guid, DateOnly và DateTime
+
+- `Guid` tạo mã định danh không phụ thuộc thứ tự hiển thị;
+- `DateOnly` phù hợp hạn công việc vì không cần giờ/phút/múi giờ;
+- `DateTime` phù hợp `CreatedAt` và `UpdatedAt` vì cần thời điểm chính xác.
+
+**Kiến thức học được:** chọn đúng kiểu giúp code tự mô tả và tránh lỗi. Không nên lưu tất cả dưới dạng string.
+
+### 4.16. Pattern matching và biểu thức hiện đại của C#
+
+Mã nguồn sử dụng:
+
+```csharp
+return answer is "y" or "yes";
+```
+
+và:
+
+```csharp
+priority switch
+{
+    TaskPriority.High => "Cao",
+    TaskPriority.Low  => "Thấp",
+    _                 => "Trung bình"
+};
+```
+
+**Kiến thức học được:** pattern matching và switch expression giúp code ngắn nhưng vẫn rõ, thay cho nhiều khối `if/else`.
+
+### 4.17. Top-level statements, event và using declaration
+
+`Program.cs` sử dụng top-level statements; compiler tự tạo entry point. Sự kiện `Console.CancelKeyPress` xử lý Ctrl+C. `using var` tự giải phóng `CancellationTokenSource`.
+
+**Kiến thức học được:**
+
+- top-level statements phù hợp app nhỏ và composition root;
+- event cho phép phản ứng với hành động hệ thống;
+- `IDisposable` và `using` giúp giải phóng tài nguyên xác định, không chờ garbage collector.
+
+### 4.18. TUI với Spectre.Console
+
+Ứng dụng sử dụng:
+
+- `Panel` cho header, card và form;
+- `Table` cho dữ liệu có cột;
+- `SelectionPrompt<T>` cho menu phím mũi tên;
+- `BreakdownChart` cho tiến độ;
+- `Markup` và `Style` cho màu;
+- `AnsiConsole.Clear()` để refresh màn hình;
+- `Markup.Escape()` để nội dung người dùng không phá cú pháp markup.
+
+**Kiến thức học được:** console vẫn có thể có kiến trúc giao diện gồm view, component, theme và interaction. Quan trọng nhất là dữ liệu người dùng phải được escape trước khi render.
+
+Chương trình còn có fallback nhập số khi `Console.IsInputRedirected`, nhờ vậy giao diện tương tác không làm hỏng automated test hoặc kịch bản E2E.
+
+### 4.19. Defensive programming với input và EOF
+
+`InputValidator` lặp lại nếu số/ngày không hợp lệ. `ConsoleInput` phát hiện `Console.ReadLine()` trả về `null` khi stream kết thúc.
+
+**Kiến thức học được:** input là dữ liệu không đáng tin cậy. Chương trình phải xử lý chuỗi rỗng, sai kiểu, ngày sai định dạng và EOF; nếu không, menu có thể quay vô hạn khi chạy bằng pipe.
+
+### 4.20. Unit test, Fake Object và Arrange–Act–Assert
+
+`TaskServiceTests` dùng repository trong bộ nhớ:
+
+```csharp
+private readonly InMemoryTaskRepository _repo = new();
+private readonly TaskService _service;
+
+public TaskServiceTests()
+    => _service = new TaskService(_repo);
+```
+
+Mỗi test có ba phần:
+
+1. **Arrange:** chuẩn bị service và dữ liệu;
+2. **Act:** gọi method cần test;
+3. **Assert:** kiểm tra kết quả và side effect.
+
+`JsonTaskRepositoryTests` dùng file tạm thật và xóa trong `Dispose()`.
+
+**Kiến thức học được:**
+
+- unit test phải nhanh, độc lập và lặp lại được;
+- fake repository tránh phụ thuộc file system trong test nghiệp vụ;
+- integration-style test repository kiểm tra serialize thật;
+- test cả happy path và edge case: ID không tồn tại, file chưa có, file JSON hỏng, task đã xong không được tính quá hạn;
+- test giúp refactor UI mạnh mà vẫn biết tầng nghiệp vụ không bị phá.
 
 ---
 
-## 7. Checklist nghiệm thu
+## 5. Kiểm thử và đảm bảo chất lượng
 
-| # | Tiêu chí | Trạng thái | Bằng chứng |
-|---|----------|-----------|------------|
-| 1 | Build thành công, **0 warning / 0 error** | ✅ | `dotnet build TodoApp.sln` |
-| 2 | Chạy được trên console, hiển thị tiếng Việt đúng dấu | ✅ | Ảnh demo mục 1 |
-| 3 | Thêm / Xem / Sửa / Xóa ghi chú | ✅ | Mục 2 (bản truy vết) + ảnh demo |
-| 4 | Đánh dấu hoàn thành (✓/✗) | ✅ | Ảnh demo-02 — task "Bài tập Lập trình Windows" hiển thị ✓ Xong + gạch strikethrough |
-| 5 | Tìm kiếm & lọc theo trạng thái | ✅ | `TaskService.Search()`, `TaskService.Filter()` |
-| 6 | Lưu file JSON, nạp lại khi mở app | ✅ | `JsonTaskRepository` + test round-trip |
-| 7 | Kiểm tra input hợp lệ, không crash khi input sai | ✅ | `InputValidator`, `ConsoleInput` |
-| 8 | `readme.md` tổng kết kỹ thuật C# | ✅ | Mục 4 (22 kỹ thuật) |
-| 9 | Nêu 3 điểm cải tiến | ✅ | Mục 6 |
-| 10 | Unit test đạt 100% pass | ✅ | `dotnet test` → 17/17 PASSED |
-| 11 | Nộp `{MSSV}.zip` | ✅ | `23120193.zip` |
+### 5.1. Phạm vi 17 unit test
 
----
+| Test suite | Số test | Nội dung |
+|---|---:|---|
+| `TaskServiceTests` | 12 | Thêm, trim input, thứ tự thêm, toggle hai lần, ID không tồn tại, cập nhật, xóa, tìm kiếm, lọc, quá hạn, load repository |
+| `JsonTaskRepositoryTests` | 5 | File chưa tồn tại, round-trip đủ field, enum dạng string, JSON hỏng không crash, ghi đè dữ liệu |
+| **Tổng** | **17** | **17 passed, 0 failed** |
 
-## 8. Ghi chú kỹ thuật & vận hành
+### 5.2. Các tình huống biên đã xử lý
 
-| Vấn đề | Cách xử lý trong code |
-|--------|------------------------|
-| Dấu tiếng Việt / ✓✗ thành `???` | `Console.OutputEncoding = Encoding.UTF8` |
-| File JSON bị hỏng khi mở lại | `catch (JsonException)` → cảnh báo, bắt đầu với danh sách rỗng thay vì crash |
-| Mất điện giữa lúc lưu | Ghi ra `.tmp` rồi `File.Move(overwrite: true)` |
-| Người dùng nhập sai (ngày/số/chuỗi rỗng) | `InputValidator` lặp lại đến khi hợp lệ |
-| Ctrl+C giữa chừng | `CancelKeyPress` + `finally` đảm bảo ghi dữ liệu |
-| Pipe/EOF khiến menu quay vô hạn | `ConsoleInput.ReadLine()` trả `null` → thoát sạch, exit code 0 |
+| Tình huống | Hành vi chương trình |
+|---|---|
+| Tiêu đề trống | Yêu cầu nhập lại |
+| Ngày không đúng định dạng | Báo ví dụ hợp lệ và yêu cầu nhập lại |
+| Chọn số ngoài khoảng | Yêu cầu nhập lại |
+| Danh sách rỗng mà chọn sửa/xóa/toggle | Hiển thị thông báo, không crash |
+| Xóa task | Yêu cầu xác nhận |
+| JSON không tồn tại | Khởi tạo danh sách rỗng |
+| JSON bị hỏng | Cảnh báo và không làm app crash |
+| Ctrl+C | Phát cancellation và chạy `finally` |
+| Hết stream stdin | Thoát sạch, không vòng lặp vô hạn |
+| Tiêu đề có ký tự markup `[]` | Dùng `Markup.Escape()` trước khi hiển thị |
+| Task hoàn thành nhưng ngày cũ | Không tính là quá hạn |
 
 ---
 
-*MSSV 23120193 — Bài tập Lập trình Windows.*
+## 6. Ba điểm cải tiến giúp mã nguồn có chất lượng cao hơn
+
+> Ba cải tiến dưới đây tập trung vào **chất lượng kiến trúc và độ tin cậy**, không chỉ thêm tính năng bề mặt. Mỗi điểm gồm hiện trạng, vấn đề, giải pháp, kế hoạch triển khai và lợi ích.
+
+### Cải tiến 1 — Dùng Generic Host + Dependency Injection container + cấu hình và logging
+
+#### Hiện trạng
+
+`Program.cs` đang thực hiện dependency injection thủ công:
+
+```csharp
+ITaskRepository repository = new JsonTaskRepository();
+ITaskService service = new TaskService(repository);
+var menu = new MainMenu(service);
+```
+
+Cách này rõ ràng và phù hợp project nhỏ. Tuy nhiên, khi có thêm nhiều service như settings, export, reminder, logging hoặc database, `Program.cs` sẽ phải quản lý ngày càng nhiều object và thứ tự khởi tạo.
+
+#### Giải pháp đề xuất
+
+Sử dụng `Microsoft.Extensions.Hosting` và `Microsoft.Extensions.DependencyInjection`:
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddSingleton<ITaskRepository, JsonTaskRepository>();
+builder.Services.AddSingleton<ITaskService, TaskService>();
+builder.Services.AddSingleton<MainMenu>();
+
+builder.Services.AddOptions<TodoOptions>()
+    .BindConfiguration("Todo");
+
+builder.Logging.AddConsole();
+
+using var host = builder.Build();
+await host.Services.GetRequiredService<MainMenu>().RunAsync();
+```
+
+#### Các bước triển khai
+
+1. thêm package Hosting/DependencyInjection;
+2. đưa đường dẫn dữ liệu, theme và số dòng dashboard vào `appsettings.json`;
+3. inject `IOptions<TodoOptions>` vào repository/UI;
+4. inject `ILogger<T>` thay cho `Console.WriteLine` trong data layer;
+5. để container quản lý vòng đời singleton/transient và `IDisposable`;
+6. thêm environment `Development` / `Production` nếu cần.
+
+#### Lợi ích
+
+- composition root ngắn và dễ mở rộng;
+- đổi implementation ở một nơi;
+- lifecycle của object được quản lý chuẩn;
+- log có level, timestamp và category;
+- cấu hình tách khỏi code;
+- thuận lợi chuyển app thành Worker Service, API hoặc WinForms trong tương lai.
+
+#### Đánh đổi
+
+- thêm package và khái niệm framework;
+- với project rất nhỏ, DI thủ công hiện tại dễ hiểu hơn;
+- cần tránh lạm dụng DI cho object chỉ là model dữ liệu.
+
+---
+
+### Cải tiến 2 — Thay JSON bằng SQLite, thêm transaction và optimistic concurrency
+
+#### Hiện trạng
+
+Repository hiện lưu toàn bộ danh sách vào một file JSON sau mỗi thay đổi. Atomic write giúp giảm nguy cơ file hỏng, nhưng vẫn có các giới hạn:
+
+- mỗi thao tác serialize lại toàn bộ danh sách;
+- không tối ưu khi có hàng nghìn task;
+- hai tiến trình mở cùng lúc có thể ghi đè dữ liệu của nhau;
+- truy vấn vẫn phải load toàn bộ vào RAM;
+- chưa có transaction nhiều thao tác.
+
+#### Giải pháp đề xuất
+
+Tạo thêm `SqliteTaskRepository` triển khai cùng `ITaskRepository`, hoặc mở rộng interface thành CRUD repository:
+
+```csharp
+public interface ITaskRepository
+{
+    Task<IReadOnlyList<TaskItem>> GetAllAsync(CancellationToken ct);
+    Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct);
+    Task AddAsync(TaskItem item, CancellationToken ct);
+    Task UpdateAsync(TaskItem item, CancellationToken ct);
+    Task DeleteAsync(Guid id, CancellationToken ct);
+}
+```
+
+Schema gợi ý:
+
+```sql
+CREATE TABLE Tasks (
+    Id TEXT PRIMARY KEY,
+    Title TEXT NOT NULL,
+    Description TEXT NOT NULL,
+    Priority INTEGER NOT NULL,
+    DueDate TEXT NULL,
+    IsDone INTEGER NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL,
+    Version INTEGER NOT NULL DEFAULT 1
+);
+```
+
+#### Các bước triển khai
+
+1. thêm `Microsoft.Data.Sqlite` hoặc Entity Framework Core SQLite;
+2. tạo migration/schema version;
+3. tạo index cho `IsDone`, `DueDate`, `Priority`;
+4. dùng transaction cho nhóm thay đổi;
+5. thêm cột `Version` để optimistic concurrency;
+6. khi update: `WHERE Id = @id AND Version = @oldVersion`;
+7. nếu số row cập nhật bằng 0, báo xung đột thay vì ghi đè im lặng;
+8. giữ `JsonTaskRepository` làm tùy chọn export/backup.
+
+#### Lợi ích
+
+- hiệu năng tốt hơn với dữ liệu lớn;
+- chỉ ghi row thay đổi;
+- truy vấn/lọc có thể chạy ở database;
+- transaction đảm bảo tính nhất quán;
+- phát hiện hai tiến trình sửa cùng task;
+- dễ thêm thống kê, lịch sử hoặc nhiều danh sách.
+
+#### Đánh đổi
+
+- phức tạp hơn JSON;
+- cần migration và quản lý schema;
+- backup không còn đơn giản như copy một file văn bản;
+- phải test thêm lỗi database, transaction và concurrency.
+
+---
+
+### Cải tiến 3 — Chuẩn hóa error model, cancellation end-to-end và CI/coverage
+
+#### Hiện trạng
+
+Ứng dụng đã có `CancellationToken`, exception handling và 17 test. Tuy nhiên:
+
+- các method thay đổi task chưa nhận `CancellationToken` trong chữ ký service;
+- lỗi lưu file có thể được ném thẳng lên UI dưới dạng exception;
+- chưa phân biệt rõ validation error, not found, I/O error và conflict;
+- chưa có pipeline CI chạy build/test tự động trên GitHub;
+- chưa đo code coverage.
+
+#### Giải pháp đề xuất
+
+**a) Truyền cancellation xuyên suốt:**
+
+```csharp
+Task<Result<TaskItem>> AddAsync(
+    CreateTaskRequest request,
+    CancellationToken ct = default);
+```
+
+Token đi theo đường:
+
+```text
+MainMenu → ITaskService → ITaskRepository → File/Database API
+```
+
+**b) Dùng Result pattern cho lỗi dự kiến:**
+
+```csharp
+public sealed record Result<T>(
+    bool IsSuccess,
+    T? Value,
+    Error? Error);
+
+public sealed record Error(string Code, string Message);
+```
+
+Ví dụ code lỗi: `TASK_NOT_FOUND`, `VALIDATION_ERROR`, `STORAGE_UNAVAILABLE`, `CONCURRENCY_CONFLICT`.
+
+Exception chỉ dành cho lỗi thật sự bất thường; lỗi nghiệp vụ dự kiến được trả về có cấu trúc.
+
+**c) Thêm GitHub Actions và coverage:**
+
+```yaml
+- run: dotnet restore
+- run: dotnet build --no-restore --configuration Release
+- run: dotnet test --no-build --configuration Release \
+       --collect:"XPlat Code Coverage"
+```
+
+#### Các bước triển khai
+
+1. thêm `CancellationToken` cho toàn bộ command method;
+2. tạo request DTO và validate tại service, không chỉ UI;
+3. tạo `Result<T>`/`Error` và ánh xạ sang message thân thiện ở UI;
+4. thêm retry có giới hạn cho lỗi I/O tạm thời;
+5. thêm test cancellation, permission denied, disk full mô phỏng và concurrency;
+6. tạo workflow `.github/workflows/ci.yml`;
+7. đặt quality gate: build không warning, test pass, coverage nghiệp vụ tối thiểu 80%.
+
+#### Lợi ích
+
+- hủy thao tác nhanh và nhất quán;
+- tầng nghiệp vụ không phụ thuộc cách UI hiển thị lỗi;
+- lỗi có mã, dễ test và log;
+- mỗi lần push đều được kiểm tra tự động;
+- coverage giúp phát hiện nhánh logic chưa được test;
+- giảm nguy cơ “chạy được trên máy em nhưng lỗi khi nộp”.
+
+#### Đánh đổi
+
+- chữ ký method dài hơn;
+- Result pattern thêm một lớp abstraction;
+- coverage cao không tự động đồng nghĩa test tốt, vẫn phải kiểm tra chất lượng assertion.
+
+---
+
+## 7. Các quyết định thiết kế đáng chú ý
+
+### Vì sao dùng Console/TUI thay vì WinForms?
+
+Đề bài yêu cầu chương trình chạy trên console. Nếu đổi sang WinForms thì giao diện đẹp hơn nhưng không còn đúng loại ứng dụng được giao. TUI là lựa chọn cân bằng: giữ đúng yêu cầu console nhưng cải thiện UX bằng dashboard, màu, bảng, biểu đồ và keyboard navigation.
+
+### Vì sao lưu tự động sau mỗi thao tác?
+
+Ưu điểm là người dùng không cần nhớ bấm Save và ít mất dữ liệu. Đánh đổi là số lần I/O tăng. Với quy mô bài tập, độ an toàn quan trọng hơn tối ưu nhỏ này. Nếu dữ liệu lớn, cải tiến SQLite/Unit of Work ở mục 6 phù hợp hơn.
+
+### Vì sao UI có fallback nhập số?
+
+`SelectionPrompt` hoạt động tốt khi người dùng trực tiếp bấm phím. Nhưng automated test hoặc script E2E truyền input qua pipe không có keyboard event. Vì vậy UI kiểm tra `Console.IsInputRedirected`: tương tác thật dùng menu ↑/↓; test dùng lựa chọn số. Đây là cách giữ cả UX và khả năng tự động hóa.
+
+### Vì sao service trả `IReadOnlyList`?
+
+Nếu trả `List<TaskItem>`, UI có thể vô tình gọi `Remove` mà không lưu repository. `IReadOnlyList` giới hạn quyền truy cập, buộc thay đổi đi qua service.
+
+---
+
+## 8. Checklist nghiệm thu
+
+| Tiêu chí | Trạng thái | Bằng chứng |
+|---|:---:|---|
+| Project Console C# chạy được | ✅ | `dotnet run --project src/TodoApp` |
+| UI được cải thiện thành dashboard TUI | ✅ | `ConsoleUi.cs`, ảnh demo |
+| Menu phím ↑/↓/Enter | ✅ | `SelectionPrompt<string>` |
+| Thêm / xem / sửa / xóa task | ✅ | `MainMenu.cs`, `TaskService.cs` |
+| Toggle hoàn thành | ✅ | `ToggleDoneAsync()` |
+| Priority và deadline | ✅ | `TaskPriority`, `DateOnly?` |
+| Tìm kiếm và lọc | ✅ | LINQ + switch expression |
+| Tự phát hiện quá hạn | ✅ | `TaskItem.IsOverdue()` |
+| Lưu/nạp JSON | ✅ | `JsonTaskRepository` |
+| Atomic write | ✅ | ghi `.tmp` rồi `File.Move` |
+| Xử lý input sai và EOF | ✅ | `InputValidator`, `ConsoleInput` |
+| Ctrl+C và lưu khi thoát | ✅ | `CancellationTokenSource`, `finally` |
+| Nullable enabled | ✅ | `TodoApp.csproj` |
+| Build sạch | ✅ | 0 warning / 0 error |
+| Unit test | ✅ | 17/17 passed |
+| README tổng kết kỹ thuật C# | ✅ | Mục 4 — 20 nhóm kỹ thuật |
+| README nêu 3 cải tiến | ✅ | Mục 6 — hiện trạng, giải pháp, kế hoạch, lợi ích, đánh đổi |
+| File nộp đúng MSSV | ✅ | `23120193.zip` |
+
+---
+
+## 9. Kết luận
+
+Qua bài tập này, em không chỉ học cú pháp C# để tạo một menu CRUD, mà còn thực hành:
+
+- mô hình hóa dữ liệu bằng class, enum, `Guid`, `DateOnly` và nullable;
+- tổ chức code theo tầng và trách nhiệm;
+- áp dụng interface, Dependency Inversion và constructor injection;
+- truy vấn collection bằng LINQ;
+- lập trình I/O bất đồng bộ với `async/await`;
+- serialize JSON và ghi file an toàn;
+- xử lý exception, cancellation, Ctrl+C và EOF;
+- xây dựng TUI có dashboard và keyboard navigation;
+- viết unit test bằng xUnit và fake repository;
+- đánh giá giới hạn hiện tại để đề xuất cải tiến có cơ sở.
+
+Kết quả cuối cùng là một ứng dụng console có giao diện trực quan, dữ liệu bền vững, kiến trúc tách biệt và bộ test hồi quy để hỗ trợ thay đổi mã nguồn an toàn.
+
+---
+
+**Trần Kim Yến — MSSV 23120193 — Bài tập môn Lập trình Windows**
+

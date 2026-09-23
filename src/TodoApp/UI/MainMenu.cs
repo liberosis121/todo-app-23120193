@@ -6,51 +6,36 @@ using TodoApp.Utils;
 namespace TodoApp.UI;
 
 /// <summary>
-/// Vòng lặp menu chính: đọc lệnh → gọi Service → hiển thị kết quả.
-/// Chỉ có lớp này biết về Console; Service hoàn toàn "thuần nghiệp vụ".
+/// Application controller của giao diện: nhận lựa chọn từ TUI, gọi service tương ứng
+/// và điều hướng giữa các view. Lớp này không chứa quy tắc nghiệp vụ.
 /// </summary>
 public sealed class MainMenu
 {
     private static readonly string[] MenuItems =
     {
-        "Thêm công việc",
-        "Xem danh sách / Lọc",
-        "Tìm kiếm",
-        "Đánh dấu hoàn thành",
-        "Sửa công việc",
-        "Xóa công việc",
-        "Thoát"
+        "＋  Thêm công việc mới",
+        "≡  Xem danh sách và lọc",
+        "?  Tìm kiếm công việc",
+        "✓  Đổi trạng thái hoàn thành",
+        "~  Chỉnh sửa công việc",
+        "×  Xóa công việc",
+        "→  Thoát ứng dụng"
     };
 
     private readonly ITaskService _service;
     private bool _running = true;
+    private string? _notification;
 
     public MainMenu(ITaskService service) => _service = service;
 
-    /// <summary>Chạy ứng dụng cho đến khi người dùng chọn Thoát.</summary>
     public async Task RunAsync(CancellationToken ct = default)
     {
-        ConsoleUi.Banner();
-
-        while (_running)
+        while (_running && !ct.IsCancellationRequested)
         {
-            ConsoleUi.Divider();
-            ConsoleUi.Stats(_service.Items);
-            AnsiConsole.WriteLine();
+            ConsoleUi.Dashboard(_service.Items, _notification);
+            _notification = null;
 
-            for (var i = 0; i < MenuItems.Length; i++)
-                AnsiConsole.MarkupLine($"  [bold cyan]{i + 1}.[/] {MenuItems[i]}");
-
-            AnsiConsole.WriteLine();
-            var choice = ConsoleUi.ReadMenuChoice(MenuItems.Length);
-            if (choice == 0 && ConsoleInput.Eof) break;         // hết nhập liệu → thoát sạch
-            if (choice < 0)
-            {
-                ConsoleUi.Warn("Lựa chọn không hợp lệ, thử lại.");
-                continue;
-            }
-
-            // Gọi handler tương ứng; async/await chạy tuần tự từng thao tác
+            var choice = ConsoleUi.MainMenu(MenuItems);
             switch (choice)
             {
                 case 1: await AddTaskAsync(ct); break;
@@ -60,113 +45,111 @@ public sealed class MainMenu
                 case 5: await EditTaskAsync(ct); break;
                 case 6: await RemoveTaskAsync(ct); break;
                 case 7: _running = false; break;
-                case 0: ShowDataInfo(); break;   // "bí mật": 0 = info file dữ liệu
+                default: _notification = "Lựa chọn không hợp lệ, vui lòng thử lại."; break;
             }
         }
 
-        ConsoleUi.Info("Tạm biệt! Dữ liệu đã được lưu.");
+        ConsoleUi.BeginView("HẸN GẶP LẠI");
+        ConsoleUi.Success("Dữ liệu đã được lưu an toàn. Chúc bạn hoàn thành tốt mọi công việc!");
     }
 
     private async Task AddTaskAsync(CancellationToken ct)
     {
-        AnsiConsole.MarkupLine("\n[bold cyan]＋ Thêm công việc mới[/]");
+        ConsoleUi.BeginView("THÊM CÔNG VIỆC");
+        ConsoleUi.FormHeader("＋", "THÔNG TIN CÔNG VIỆC MỚI",
+            "Tiêu đề là bắt buộc • Mô tả và hạn chót có thể bỏ trống");
+
         var title = InputValidator.PromptNonEmpty("Tiêu đề");
         var description = InputValidator.PromptOptional("Mô tả");
         var priority = ConsoleUi.PromptPriority();
         var due = InputValidator.PromptDate("Hạn hoàn thành");
 
         await _service.AddAsync(title, description, priority, due);
-        ConsoleUi.Info($"Đã thêm \"{title}\".");
         ct.ThrowIfCancellationRequested();
+        _notification = $"Đã thêm “{title}”.";
     }
 
     private void ListTasks()
     {
-        AnsiConsole.MarkupLine("\n[bold cyan]Danh sách công việc[/]");
-        AnsiConsole.MarkupLine("[grey]1. Tất cả   2. Chưa xong   3. Đã xong   4. Quá hạn[/]");
-        var choice = InputValidator.PromptInt("Lọc", 1, 4);
-        var filter = (TaskFilter)(choice - 1);
-
+        ConsoleUi.BeginView("DANH SÁCH CÔNG VIỆC", "Chọn một bộ lọc để thu gọn danh sách");
+        var filter = ConsoleUi.PromptFilter();
         var items = _service.Filter(filter);
-        ConsoleUi.RenderTasks(items, $"Lọc: {filter switch
+        var label = filter switch
         {
-            TaskFilter.Active => "Chưa xong",
-            TaskFilter.Done => "Đã xong",
-            TaskFilter.Overdue => "Quá hạn",
-            _ => "Tất cả"
-        }}");
+            TaskFilter.Active => "CHƯA HOÀN THÀNH",
+            TaskFilter.Done => "ĐÃ HOÀN THÀNH",
+            TaskFilter.Overdue => "QUÁ HẠN",
+            _ => "TẤT CẢ CÔNG VIỆC"
+        };
+
+        ConsoleUi.RenderTasks(items, $"{label} • {items.Count} MỤC");
+        ConsoleUi.Pause();
     }
 
     private void SearchTasks()
     {
-        AnsiConsole.MarkupLine("\n[bold cyan]Tìm kiếm công việc[/]");
+        ConsoleUi.BeginView("TÌM KIẾM", "Tìm trong cả tiêu đề và mô tả, không phân biệt chữ hoa/thường");
+        ConsoleUi.FormHeader("?", "NHẬP TỪ KHÓA", "Ví dụ: học tập, báo cáo, mua sắm...");
         var keyword = InputValidator.PromptNonEmpty("Từ khóa");
         var results = _service.Search(keyword);
-        ConsoleUi.RenderTasks(results, $"Kết quả cho \"{keyword}\" ({results.Count} mục)");
+
+        ConsoleUi.RenderTasks(results, $"KẾT QUẢ “{keyword}” • {results.Count} MỤC");
+        ConsoleUi.Pause();
     }
 
     private async Task ToggleTaskAsync(CancellationToken ct)
     {
         if (!EnsureHasTasks()) return;
-
-        AnsiConsole.MarkupLine("\n[bold cyan]Đánh dấu hoàn thành[/]");
-        ConsoleUi.RenderTasks(_service.Items, "Chọn công việc");
-        var index = ConsoleUi.PickIndex(_service.Items.Count);
-        var item = _service.Items[index];
+        ConsoleUi.BeginView("CẬP NHẬT TRẠNG THÁI", "Chọn task để chuyển giữa Chưa xong ↔ Đã xong");
+        ConsoleUi.RenderTasks(_service.Items, "CHỌN CÔNG VIỆC", showDescription: false);
+        var item = ConsoleUi.PickTask(_service.Items, "Công việc cần đổi trạng thái");
 
         await _service.ToggleDoneAsync(item.Id);
-        ConsoleUi.Info(item.IsDone
-            ? $"Đánh dấu \"{item.Title}\" là ĐÃ XONG."
-            : $"Bỏ đánh dấu \"{item.Title}\".");
         ct.ThrowIfCancellationRequested();
+        _notification = item.IsDone
+            ? $"“{item.Title}” đã hoàn thành. Làm tốt lắm!"
+            : $"Đã chuyển “{item.Title}” về trạng thái chưa xong.";
     }
 
     private async Task EditTaskAsync(CancellationToken ct)
     {
         if (!EnsureHasTasks()) return;
+        ConsoleUi.BeginView("CHỈNH SỬA CÔNG VIỆC");
+        var item = ConsoleUi.PickTask(_service.Items, "Chọn công việc cần chỉnh sửa");
 
-        AnsiConsole.MarkupLine("\n[bold cyan]Sửa công việc[/]");
-        ConsoleUi.RenderTasks(_service.Items, "Chọn công việc cần sửa");
-        var index = ConsoleUi.PickIndex(_service.Items.Count);
-        var item = _service.Items[index];
-
-        AnsiConsole.MarkupLine("[grey]Enter để giữ nguyên giá trị hiện tại.[/]");
+        ConsoleUi.FormHeader("~", "THÔNG TIN CHỈNH SỬA",
+            "Nhấn Enter để giữ nguyên tiêu đề, mô tả hoặc hạn chót hiện tại");
         var title = InputValidator.PromptNonEmpty("Tiêu đề", item.Title);
         var description = InputValidator.PromptOptional("Mô tả") ?? item.Description;
         var priority = ConsoleUi.PromptPriority(item.Priority);
         var due = InputValidator.PromptDate("Hạn hoàn thành", item.DueDate);
 
         await _service.UpdateAsync(item.Id, title, description, priority, due);
-        ConsoleUi.Info($"Đã cập nhật \"{title}\".");
         ct.ThrowIfCancellationRequested();
+        _notification = $"Đã cập nhật “{title}”.";
     }
 
     private async Task RemoveTaskAsync(CancellationToken ct)
     {
         if (!EnsureHasTasks()) return;
+        ConsoleUi.BeginView("XÓA CÔNG VIỆC", "Thao tác xóa không thể hoàn tác");
+        var item = ConsoleUi.PickTask(_service.Items, "Chọn công việc cần xóa");
 
-        AnsiConsole.MarkupLine("\n[bold red]Xóa công việc[/]");
-        ConsoleUi.RenderTasks(_service.Items, "Chọn công việc cần xóa");
-        var index = ConsoleUi.PickIndex(_service.Items.Count);
-        var item = _service.Items[index];
-
-        if (!ConsoleUi.Confirm($"Xóa \"{item.Title}\"? Hành động này không hoàn tác.")) return;
+        if (!ConsoleUi.Confirm($"Bạn chắc chắn muốn xóa “{item.Title}”?"))
+        {
+            _notification = "Đã hủy thao tác xóa.";
+            return;
+        }
 
         await _service.RemoveAsync(item.Id);
-        ConsoleUi.Info("Đã xóa 1 công việc.");
         ct.ThrowIfCancellationRequested();
-    }
-
-    private void ShowDataInfo()
-    {
-        AnsiConsole.MarkupLine($"\n[grey]Số công việc trong bộ nhớ: {_service.Items.Count}[/]");
-        AnsiConsole.MarkupLine("[grey]Nhập 0 bất kỳ lúc nào để xem thông tin này.[/]");
+        _notification = $"Đã xóa “{item.Title}”.";
     }
 
     private bool EnsureHasTasks()
     {
         if (_service.Items.Count > 0) return true;
-        ConsoleUi.Warn("Chưa có công việc nào. Hãy chọn chức năng 1 để thêm.");
+        _notification = "Danh sách đang trống. Hãy thêm công việc trước.";
         return false;
     }
 }
