@@ -1,4 +1,4 @@
-﻿# TODO Desk — Ứng dụng quản lý công việc trên Console
+# TODO Desk — Ứng dụng quản lý công việc trên Console
 
 | Thông tin | Nội dung |
 |---|---|
@@ -14,6 +14,36 @@
 
 ---
 
+<a id="muc-luc"></a>
+
+## Mục lục
+
+1. [Giới thiệu](#gioi-thieu)
+   - [Chức năng chính](#chuc-nang-chinh)
+   - [Ảnh chụp giao diện](#anh-giao-dien)
+2. [Cài đặt, chạy và kiểm thử](#cai-dat-chay-test)
+   - [Yêu cầu môi trường](#yeu-cau-moi-truong)
+   - [Chạy nhanh bằng dotnet CLI](#chay-bang-cli)
+   - [Chạy bằng Visual Studio](#chay-bang-visual-studio)
+   - [Cách sử dụng ứng dụng](#cach-su-dung)
+   - [Chạy toàn bộ unit test](#chay-unit-test)
+   - [Chạy từng nhóm test](#chay-tung-test)
+   - [Dữ liệu và khôi phục trạng thái](#du-lieu-va-khoi-phuc)
+   - [Xử lý lỗi thường gặp](#loi-thuong-gap)
+3. [Kiến trúc mã nguồn](#kien-truc)
+4. [Các kỹ thuật C# học được](#ky-thuat-csharp)
+5. [Kiểm thử và đảm bảo chất lượng](#dam-bao-chat-luong)
+6. [Ba điểm cải tiến mã nguồn](#ba-diem-cai-tien)
+7. [Các quyết định thiết kế](#quyet-dinh-thiet-ke)
+8. [Checklist nghiệm thu](#checklist-nghiem-thu)
+9. [Kết luận](#ket-luan)
+
+> Có thể nhấn vào từng mục để chuyển nhanh đến nội dung tương ứng.
+
+---
+
+<a id="gioi-thieu"></a>
+
 ## 1. Giới thiệu
 
 **TODO Desk** là ứng dụng quản lý ghi chú công việc chạy trên console. Thay vì chỉ in menu chữ và yêu cầu người dùng nhập số, chương trình sử dụng **Terminal User Interface (TUI)** để tạo trải nghiệm gần giống một ứng dụng desktop ngay trong terminal:
@@ -27,6 +57,8 @@
 - dữ liệu tự động lưu ra JSON và được nạp lại ở lần chạy sau.
 
 Ứng dụng vẫn tuân thủ yêu cầu **chạy trên console**, không chuyển sang WinForms/WPF. Spectre.Console chỉ làm đẹp terminal và không thay đổi bản chất của loại project.
+
+<a id="chuc-nang-chinh"></a>
 
 ### 1.1. Chức năng chính
 
@@ -42,6 +74,8 @@
 | 8 | Lưu bền vững | Tự lưu JSON sau mỗi thay đổi và nạp dữ liệu khi khởi động |
 | 9 | Xử lý quá hạn | Tự tính theo ngày hiện tại; không xem task đã hoàn thành là quá hạn |
 | 10 | Thoát an toàn | Hỗ trợ Ctrl+C, cancellation và lưu dữ liệu trong `finally` |
+
+<a id="anh-giao-dien"></a>
 
 ### 1.2. Ảnh chụp giao diện thực tế
 
@@ -63,49 +97,189 @@ Trong ảnh thứ hai:
 
 ---
 
-## 2. Cài đặt và chạy chương trình
+<a id="cai-dat-chay-test"></a>
+
+## 2. Cài đặt, chạy và kiểm thử dự án
+
+> Tất cả lệnh trong mục này phải được thực hiện tại **thư mục gốc của project** — nơi chứa file `TodoApp.sln`.
+
+<a id="yeu-cau-moi-truong"></a>
 
 ### 2.1. Yêu cầu môi trường
 
-- Windows 10/11;
-- Visual Studio có workload **.NET Desktop Development**, hoặc .NET SDK 10.0 trở lên;
+- Windows 10 hoặc Windows 11;
+- [.NET SDK 10.0](https://dotnet.microsoft.com/download) trở lên;
+- Visual Studio có workload **.NET Desktop Development** nếu chạy bằng IDE;
 - terminal hỗ trợ UTF-8, khuyến nghị Windows Terminal.
 
-Kiểm tra phiên bản SDK:
+Kiểm tra .NET SDK đã được cài:
 
 ```powershell
 dotnet --version
 ```
 
-### 2.2. Chạy bằng Visual Studio
+Kết quả phải hiển thị phiên bản `10.0.x` hoặc mới hơn, ví dụ:
 
-1. Mở `TodoApp.sln`.
-2. Chọn `TodoApp` làm Startup Project.
-3. Nhấn **F5** hoặc **Ctrl+F5**.
-4. Dùng **↑ / ↓** để chọn chức năng và nhấn **Enter**.
+```text
+10.0.401
+```
 
-### 2.3. Chạy bằng dòng lệnh
+Nếu lệnh `dotnet` không tồn tại, cần cài .NET SDK rồi mở lại terminal.
+
+<a id="chay-bang-cli"></a>
+
+### 2.2. Chạy nhanh bằng dotnet CLI
+
+**Bước 1 — giải nén và chuyển vào thư mục project:**
 
 ```powershell
-dotnet restore
+cd "duong-dan-den-thu-muc-da-giai-nen"
+```
+
+**Bước 2 — tải các NuGet package:**
+
+```powershell
+dotnet restore TodoApp.sln
+```
+
+Lệnh này tải Spectre.Console, xUnit và các package phục vụ test được khai báo trong `.csproj`.
+
+**Bước 3 — build toàn bộ solution:**
+
+```powershell
 dotnet build TodoApp.sln
+```
+
+Build thành công phải kết thúc bằng:
+
+```text
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+**Bước 4 — chạy ứng dụng:**
+
+```powershell
+dotnet run --project src/TodoApp/TodoApp.csproj
+```
+
+Có thể dùng dạng rút gọn tương đương:
+
+```powershell
 dotnet run --project src/TodoApp
 ```
 
-### 2.4. Chạy kiểm thử
+Để chạy nhanh sau khi đã build và không build lại:
+
+```powershell
+dotnet run --project src/TodoApp --no-build
+```
+
+<a id="chay-bang-visual-studio"></a>
+
+### 2.3. Chạy bằng Visual Studio
+
+1. Khởi động Visual Studio.
+2. Chọn **Open a project or solution**.
+3. Mở file `TodoApp.sln` ở thư mục gốc.
+4. Trong **Solution Explorer**, nhấp phải project `TodoApp`.
+5. Chọn **Set as Startup Project** nếu `TodoApp` chưa được in đậm.
+6. Chờ Visual Studio restore NuGet package hoàn tất.
+7. Nhấn **Ctrl+F5** để chạy không debug, hoặc **F5** để chạy với debugger.
+
+Nếu Visual Studio hỏi chọn startup project, cần chọn project trong thư mục `src/TodoApp`, không chọn `TodoApp.Tests`.
+
+<a id="cach-su-dung"></a>
+
+### 2.4. Cách sử dụng ứng dụng
+
+| Thao tác | Phím sử dụng |
+|---|---|
+| Di chuyển giữa các lựa chọn | `↑` / `↓` |
+| Xác nhận lựa chọn | `Enter` |
+| Nhập nội dung form | Gõ nội dung rồi nhấn `Enter` |
+| Bỏ qua trường tùy chọn | Chỉ nhấn `Enter` |
+| Giữ giá trị cũ khi chỉnh sửa | Chỉ nhấn `Enter` |
+| Xác nhận xóa | Chọn Yes/No bằng phím điều hướng rồi `Enter` |
+| Dừng ứng dụng khẩn cấp | `Ctrl+C` — chương trình vẫn cố gắng lưu dữ liệu |
+
+Quy trình thử nhanh đề xuất:
+
+1. Chọn **Thêm công việc mới**.
+2. Nhập tiêu đề, mô tả, priority và deadline.
+3. Quay lại dashboard và kiểm tra các thẻ thống kê.
+4. Chọn **Đổi trạng thái hoàn thành**.
+5. Chọn **Xem danh sách và lọc** để kiểm tra trạng thái mới.
+6. Thoát rồi chạy lại ứng dụng để xác nhận dữ liệu vẫn còn.
+
+<a id="chay-unit-test"></a>
+
+### 2.5. Chạy toàn bộ unit test
+
+Từ thư mục chứa `TodoApp.sln`, chạy:
 
 ```powershell
 dotnet test TodoApp.sln
 ```
 
-Kết quả tại thời điểm hoàn thành bài:
+Lệnh trên sẽ:
+
+1. restore package nếu cần;
+2. build project ứng dụng và project test;
+3. chạy toàn bộ test trong `TodoApp.Tests`;
+4. tổng hợp số test pass/fail/skip.
+
+Kết quả mong đợi:
 
 ```text
 Passed! - Failed: 0, Passed: 17, Skipped: 0, Total: 17
-Build succeeded. 0 Warning(s), 0 Error(s)
 ```
 
-### 2.5. File dữ liệu
+Để test nhanh sau khi vừa build thành công:
+
+```powershell
+dotnet test TodoApp.sln --no-build
+```
+
+Để hiển thị log chi tiết hơn:
+
+```powershell
+dotnet test TodoApp.sln --logger "console;verbosity=detailed"
+```
+
+**Chạy test bằng Visual Studio:**
+
+1. mở menu **Test → Test Explorer**;
+2. chọn **Run All Tests**;
+3. kiểm tra Test Explorer hiển thị 17 test màu xanh;
+4. có thể nhấp phải một test và chọn **Debug** để đặt breakpoint.
+
+<a id="chay-tung-test"></a>
+
+### 2.6. Chạy từng nhóm hoặc từng test
+
+Chỉ chạy test nghiệp vụ `TaskServiceTests`:
+
+```powershell
+dotnet test TodoApp.sln --filter "FullyQualifiedName~TaskServiceTests"
+```
+
+Chỉ chạy test repository JSON:
+
+```powershell
+dotnet test TodoApp.sln --filter "FullyQualifiedName~JsonTaskRepositoryTests"
+```
+
+Chạy một test cụ thể:
+
+```powershell
+dotnet test TodoApp.sln --filter "FullyQualifiedName~AddAsync_AppendsItem_AndPersists"
+```
+
+<a id="du-lieu-va-khoi-phuc"></a>
+
+### 2.7. Dữ liệu và khôi phục trạng thái
 
 Khi chạy Debug, dữ liệu được lưu tại:
 
@@ -113,9 +287,48 @@ Khi chạy Debug, dữ liệu được lưu tại:
 src/TodoApp/bin/Debug/net10.0/todo.data.json
 ```
 
-Khi publish, file nằm cùng thư mục với executable. File này được tạo tự động, không cần tạo thủ công.
+Khi publish, file nằm cùng thư mục với executable. File được tạo tự động sau lần thay đổi dữ liệu đầu tiên.
+
+**Reset ứng dụng về danh sách trống:**
+
+1. đóng chương trình;
+2. xóa file `todo.data.json` ở đường dẫn trên;
+3. chạy lại ứng dụng.
+
+Không cần sửa source code và không cần tạo file JSON rỗng. Nếu file chưa tồn tại, repository tự trả về danh sách rỗng.
+
+**Build sạch lại toàn bộ solution:**
+
+```powershell
+dotnet clean TodoApp.sln
+dotnet restore TodoApp.sln
+dotnet build TodoApp.sln
+```
+
+<a id="loi-thuong-gap"></a>
+
+### 2.8. Xử lý lỗi thường gặp
+
+| Lỗi | Nguyên nhân thường gặp | Cách xử lý |
+|---|---|---|
+| `'dotnet' is not recognized` | Chưa cài SDK hoặc PATH chưa cập nhật | Cài .NET SDK 10 rồi mở lại terminal |
+| Không restore được Spectre.Console/xUnit | Mất mạng hoặc NuGet bị chặn | Kiểm tra mạng, chạy lại `dotnet restore` |
+| Build báo SDK không hỗ trợ `net10.0` | SDK đang dùng quá cũ | Chạy `dotnet --list-sdks` và cài SDK 10 |
+| Visual Studio chạy project test | Chọn sai Startup Project | Set `src/TodoApp` làm Startup Project |
+| Chữ tiếng Việt/ký hiệu hiển thị sai | Terminal/font không hỗ trợ UTF-8 | Dùng Windows Terminal và font Cascadia Mono/Consolas |
+| Muốn xóa dữ liệu demo | File JSON cũ vẫn được nạp | Đóng app rồi xóa `todo.data.json` |
+| Test không chạy do file đang bị khóa | App hoặc test cũ chưa tắt | Đóng process `TodoApp`, chạy `dotnet clean`, test lại |
+
+Sau khi xử lý, xác minh toàn bộ bằng:
+
+```powershell
+dotnet build TodoApp.sln
+dotnet test TodoApp.sln --no-build
+```
 
 ---
+
+<a id="kien-truc"></a>
 
 ## 3. Kiến trúc mã nguồn
 
@@ -216,6 +429,8 @@ TODO App/
 | Unit test | `tests/TodoApp.Tests/` |
 
 ---
+
+<a id="ky-thuat-csharp"></a>
 
 ## 4. Tổng kết chi tiết các kỹ thuật C# học được
 
@@ -597,6 +812,8 @@ Mỗi test có ba phần:
 
 ---
 
+<a id="dam-bao-chat-luong"></a>
+
 ## 5. Kiểm thử và đảm bảo chất lượng
 
 ### 5.1. Phạm vi 17 unit test
@@ -624,6 +841,8 @@ Mỗi test có ba phần:
 | Task hoàn thành nhưng ngày cũ | Không tính là quá hạn |
 
 ---
+
+<a id="ba-diem-cai-tien"></a>
 
 ## 6. Ba điểm cải tiến giúp mã nguồn có chất lượng cao hơn
 
@@ -840,6 +1059,8 @@ Exception chỉ dành cho lỗi thật sự bất thường; lỗi nghiệp vụ
 
 ---
 
+<a id="quyet-dinh-thiet-ke"></a>
+
 ## 7. Các quyết định thiết kế đáng chú ý
 
 ### Vì sao dùng Console/TUI thay vì WinForms?
@@ -859,6 +1080,8 @@ Exception chỉ dành cho lỗi thật sự bất thường; lỗi nghiệp vụ
 Nếu trả `List<TaskItem>`, UI có thể vô tình gọi `Remove` mà không lưu repository. `IReadOnlyList` giới hạn quyền truy cập, buộc thay đổi đi qua service.
 
 ---
+
+<a id="checklist-nghiem-thu"></a>
 
 ## 8. Checklist nghiệm thu
 
@@ -885,6 +1108,8 @@ Nếu trả `List<TaskItem>`, UI có thể vô tình gọi `Remove` mà không l
 
 ---
 
+<a id="ket-luan"></a>
+
 ## 9. Kết luận
 
 Qua bài tập này, em không chỉ học cú pháp C# để tạo một menu CRUD, mà còn thực hành:
@@ -905,4 +1130,3 @@ Kết quả cuối cùng là một ứng dụng console có giao diện trực q
 ---
 
 **Trần Kim Yến — MSSV 23120193 — Bài tập môn Lập trình Windows**
-
