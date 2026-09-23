@@ -309,10 +309,24 @@ public static class ConsoleUi
 
         return AnsiConsole.Prompt(new SelectionPrompt<TaskItem>()
             .Title($"[bold]{Markup.Escape(title)}[/]")
-            .PageSize(Math.Min(10, items.Count))
+            // Spectre.Console yêu cầu PageSize tối thiểu là 3, kể cả khi
+            // danh sách chỉ có 1-2 lựa chọn.
+            .PageSize(GetTaskPromptPageSize(items.Count))
             .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
             .UseConverter(t => $"{(t.IsDone ? "✓" : "○")}  {Markup.Escape(t.Title)}  [{Muted}]• {PriorityText(t.Priority)}[/]")
             .AddChoices(items));
+    }
+
+    /// <summary>
+    /// Spectre.Console yêu cầu page size từ 3 trở lên. Giới hạn trên 10 giúp
+    /// prompt không chiếm toàn bộ màn hình khi có nhiều công việc.
+    /// </summary>
+    internal static int GetTaskPromptPageSize(int itemCount)
+    {
+        if (itemCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(itemCount), "Danh sách phải có ít nhất một công việc.");
+
+        return Math.Clamp(itemCount, 3, 10);
     }
 
     public static TaskPriority PromptPriority(TaskPriority current = TaskPriority.Medium)
