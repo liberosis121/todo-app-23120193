@@ -12,13 +12,80 @@ namespace TodoApp.UI;
 /// </summary>
 public static class ConsoleUi
 {
-    private const string Accent = "deepskyblue1";
+    // Light retro palette: lấy cảm hứng từ giao diện game ASCII/pixel art.
+    // Dùng mã HEX để màu nhất quán giữa Windows Terminal và terminal ANSI.
+    private const string Ink = "#20262E";
+    private const string Muted = "#66727D";
+    private const string Teal = "#00AFA5";
+    private const string Green = "#18A558";
+    private const string Gold = "#C89B00";
+    private const string Coral = "#E5484D";
+
+    private static readonly Color TealColor = new(0, 175, 165);
+    private static readonly Color GreenColor = new(24, 165, 88);
+    private static readonly Color GoldColor = new(200, 155, 0);
+    private static readonly Color CoralColor = new(229, 72, 77);
+    private static readonly Color InkColor = new(32, 38, 46);
+    private static readonly Color MutedColor = new(102, 114, 125);
+    private static readonly Color SurfaceColor = new(244, 241, 234);
+
+    /// <summary>
+    /// Áp dụng nền sáng cho toàn bộ cửa sổ console. Spectre.Console đảm nhiệm
+    /// foreground chi tiết; ConsoleColor cung cấp màu nền mặc định.
+    /// </summary>
+    public static void ApplyLightTheme()
+    {
+        try
+        {
+            if (!Console.IsOutputRedirected && Console.Out is not LightThemeTextWriter)
+                Console.SetOut(new LightThemeTextWriter(Console.Out));
+
+            // OSC 10/11 đổi màu foreground/background mặc định của terminal.
+            // Nhờ đó mã SGR reset do Spectre.Console phát ra vẫn quay về light
+            // theme thay vì nền đen mặc định. Windows Terminal hỗ trợ đầy đủ.
+            if (!Console.IsOutputRedirected)
+                Console.Write("\u001b]10;#20262E\u0007\u001b]11;#F4F1EA\u0007");
+
+            Console.BackgroundColor = ConsoleColor.White;
+            Console.ForegroundColor = ConsoleColor.Black;
+
+            if (!Console.IsOutputRedirected) Console.Clear();
+
+            // Quan trọng: đặt default style ngay trong Spectre.Console. Nếu chỉ
+            // đổi ConsoleColor, mỗi lần Spectre reset ANSI sẽ quay về nền đen.
+            AnsiConsole.Background = SurfaceColor;
+            AnsiConsole.Foreground = InkColor;
+        }
+        catch (IOException)
+        {
+            // Một số host/CI không cho thay đổi màu console; app vẫn chạy được.
+        }
+    }
+
+    /// <summary>Trả màu terminal về profile ban đầu sau khi ứng dụng kết thúc.</summary>
+    public static void RestoreTerminalTheme()
+    {
+        try
+        {
+            if (!Console.IsOutputRedirected)
+            {
+                // OSC 110/111: reset dynamic foreground/background color.
+                Console.Out.Write("\u001b[0m\u001b]110\u0007\u001b]111\u0007");
+                Console.Out.Flush();
+            }
+            Console.ResetColor();
+        }
+        catch (IOException)
+        {
+            // Terminal đã đóng thì không cần khôi phục thêm.
+        }
+    }
 
     private static string PriorityMarkup(TaskPriority priority) => priority switch
     {
-        TaskPriority.High => "[bold red]● Cao[/]",
-        TaskPriority.Medium => "[bold yellow]● Trung bình[/]",
-        _ => "[bold cornflowerblue]● Thấp[/]"
+        TaskPriority.High => $"[bold {Coral}]● Cao[/]",
+        TaskPriority.Medium => $"[bold {Gold}]● Trung bình[/]",
+        _ => $"[bold {Teal}]● Thấp[/]"
     };
 
     /// <summary>Xóa màn hình và vẽ thanh tiêu đề nhất quán cho mỗi view.</summary>
@@ -30,22 +97,24 @@ public static class ConsoleUi
 
         var heading = new Grid().AddColumn().AddColumn(new GridColumn().RightAligned());
         heading.AddRow(
-            new Markup($"[bold {Accent}]✓ TODO DESK[/]  [grey]•[/]  [bold white]{Markup.Escape(title)}[/]"),
-            new Markup("[grey]MSSV 23120193[/]"));
+            new Markup($"[bold {Teal}]✓ TODO DESK[/]  [{Muted}]•[/]  [bold {Ink}]{Markup.Escape(title)}[/]"),
+            new Markup($"[{Muted}]MSSV 23120193[/]"));
 
         AnsiConsole.Write(new Panel(heading)
-            .Border(BoxBorder.Heavy)
-            .BorderColor(Color.DeepSkyBlue1)
+            .Border(BoxBorder.Rounded)
+            .BorderColor(TealColor)
             .Padding(1, 0));
 
         if (!string.IsNullOrWhiteSpace(subtitle))
-            AnsiConsole.MarkupLine($"[grey]{Markup.Escape(subtitle)}[/]\n");
+            AnsiConsole.MarkupLine($"[{Muted}]{Markup.Escape(subtitle)}[/]\n");
     }
 
     /// <summary>Vẽ dashboard gồm thống kê, tiến độ và các công việc gần nhất.</summary>
     public static void Dashboard(IReadOnlyList<TaskItem> items, string? notification = null)
     {
         BeginView("BẢNG ĐIỀU KHIỂN", "Dùng phím ↑/↓ để di chuyển • Enter để chọn");
+
+        RenderHero();
 
         var done = items.Count(t => t.IsDone);
         var active = items.Count - done;
@@ -58,26 +127,26 @@ public static class ConsoleUi
             .AddColumn(new GridColumn().NoWrap())
             .AddColumn(new GridColumn().NoWrap());
         cards.AddRow(
-            StatCard("TỔNG CỘNG", items.Count.ToString(), Color.DeepSkyBlue1),
-            StatCard("CHƯA XONG", active.ToString(), Color.Yellow),
-            StatCard("HOÀN THÀNH", done.ToString(), Color.Green),
-            StatCard("QUÁ HẠN", overdue.ToString(), Color.Red));
+            StatCard("TỔNG CỘNG", items.Count.ToString(), Teal, TealColor),
+            StatCard("CHƯA XONG", active.ToString(), Gold, GoldColor),
+            StatCard("HOÀN THÀNH", done.ToString(), Green, GreenColor),
+            StatCard("QUÁ HẠN", overdue.ToString(), Coral, CoralColor));
         AnsiConsole.Write(cards);
 
         var progress = new BreakdownChart().Width(60);
         if (items.Count == 0)
-            progress.AddItem("Chưa có dữ liệu", 1, Color.Grey);
+            progress.AddItem("Chưa có dữ liệu", 1, MutedColor);
         else
         {
-            if (done > 0) progress.AddItem("Đã xong", done, Color.Green);
-            if (active - overdue > 0) progress.AddItem("Đang làm", active - overdue, Color.DeepSkyBlue1);
-            if (overdue > 0) progress.AddItem("Quá hạn", overdue, Color.Red);
+            if (done > 0) progress.AddItem("Đã xong", done, GreenColor);
+            if (active - overdue > 0) progress.AddItem("Đang làm", active - overdue, TealColor);
+            if (overdue > 0) progress.AddItem("Quá hạn", overdue, CoralColor);
         }
 
         AnsiConsole.Write(new Panel(progress)
             .Header($"[bold] TIẾN ĐỘ {percent}% [/]")
             .Border(BoxBorder.Rounded)
-            .BorderColor(Color.Grey));
+            .BorderColor(GoldColor));
 
         if (items.Count > 0)
         {
@@ -92,23 +161,60 @@ public static class ConsoleUi
         else
         {
             AnsiConsole.Write(new Panel(new Markup(
-                    "[grey]Chưa có công việc nào.[/]\n[deepskyblue1]Hãy chọn “Thêm công việc” để bắt đầu.[/]"))
+                    $"[{Muted}]Chưa có công việc nào.[/]\n[bold {Teal}]Hãy chọn “Thêm công việc” để bắt đầu.[/]"))
                 .Header("[bold] DANH SÁCH TRỐNG [/]")
                 .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Grey));
+                .BorderColor(TealColor));
         }
 
         if (!string.IsNullOrWhiteSpace(notification))
             AnsiConsole.Write(new Panel(new Markup($"[green]✓[/] {Markup.Escape(notification)}"))
                 .Border(BoxBorder.Rounded)
-                .BorderColor(Color.Green));
+                .BorderColor(GreenColor));
     }
 
-    private static Panel StatCard(string label, string value, Color color) =>
-        new(new Align(new Markup($"[bold {color}]{value}[/]\n[grey]{label}[/]"), HorizontalAlignment.Center))
+    /// <summary>
+    /// Logo Figlet + mascot ASCII mang phong cách retro game. Chỉ dùng ký tự
+    /// terminal nên không cần ảnh hoặc tài nguyên ngoài.
+    /// </summary>
+    private static void RenderHero()
+    {
+        const string mascot = """
+               .--------------------.
+              /     TODO  DESK     /|
+             /____________________/ |
+             |  [x]  PLAN         | |
+             |  [ ]  DO           | |
+             |  [ ]  REVIEW       | /
+             |____________________|/
+                  \   ^    ^   /
+                   \    --    /
+                    '--------'
+            """;
+
+        var logo = new FigletText("TODO")
+            .Color(TealColor)
+            .LeftJustified();
+
+        var art = new Panel(new Text(mascot, new Style(InkColor)))
+            .Header($"[bold {Gold}] ASCII TASK-BOT [/]")
+            .Border(BoxBorder.Double)
+            .BorderColor(GoldColor)
+            .Padding(1, 0);
+
+        var hero = new Grid()
+            .AddColumn(new GridColumn())
+            .AddColumn(new GridColumn().NoWrap());
+        hero.AddRow(logo, art);
+        AnsiConsole.Write(hero);
+        AnsiConsole.MarkupLine($"[bold {Green}]MAKE A PLAN.[/]  [bold {Teal}]DO THE WORK.[/]  [bold {Gold}]ENJOY THE WIN.[/]\n");
+    }
+
+    private static Panel StatCard(string label, string value, string markupColor, Color borderColor) =>
+        new(new Align(new Markup($"[bold {markupColor}]{value}[/]\n[{Muted}]{label}[/]"), HorizontalAlignment.Center))
         {
             Border = BoxBorder.Rounded,
-            BorderStyle = new Style(color),
+            BorderStyle = new Style(borderColor),
             Padding = new Padding(2, 0)
         };
 
@@ -117,18 +223,18 @@ public static class ConsoleUi
     {
         if (items.Count == 0)
         {
-            AnsiConsole.Write(new Panel("[grey]Không có công việc phù hợp.[/]")
-                .Header($"[bold {Accent}] {Markup.Escape(title)} [/]")
-                .BorderColor(Color.Grey));
+            AnsiConsole.Write(new Panel($"[{Muted}]Không có công việc phù hợp.[/]")
+                .Header($"[bold {Teal}] {Markup.Escape(title)} [/]")
+                .BorderColor(TealColor));
             return;
         }
 
         var table = new Table()
             .Expand()
             .Border(TableBorder.Rounded)
-            .BorderColor(Color.Grey)
-            .Title($"[bold {Accent}] {Markup.Escape(title)} [/]")
-            .AddColumn(new TableColumn("[bold grey]#[/]").Centered().Width(3))
+            .BorderColor(TealColor)
+            .Title($"[bold {Teal}] {Markup.Escape(title)} [/]")
+            .AddColumn(new TableColumn($"[bold {Muted}]#[/]").Centered().Width(3))
             .AddColumn(new TableColumn("[bold]Trạng thái[/]").Centered())
             .AddColumn(new TableColumn("[bold]Ưu tiên[/]").Centered())
             .AddColumn(new TableColumn("[bold]Tiêu đề[/]"))
@@ -139,15 +245,15 @@ public static class ConsoleUi
         for (var i = 0; i < items.Count; i++)
         {
             var t = items[i];
-            var status = t.IsDone ? "[bold green]✓ Xong[/]" : "[grey]○ Chưa xong[/]";
+            var status = t.IsDone ? $"[bold {Green}]✓ Xong[/]" : $"[{Muted}]○ Chưa xong[/]";
             var due = t.DueDate is null
-                ? "[grey]Không hạn[/]"
+                ? $"[{Muted}]Không hạn[/]"
                 : t.IsOverdue()
-                    ? $"[bold red]{t.DueDate:dd/MM/yyyy} ⚠[/]"
-                    : $"[white]{t.DueDate:dd/MM/yyyy}[/]";
+                    ? $"[bold {Coral}]{t.DueDate:dd/MM/yyyy} ⚠[/]"
+                    : $"[{Ink}]{t.DueDate:dd/MM/yyyy}[/]";
             var taskTitle = t.IsDone
-                ? $"[strike grey]{Markup.Escape(t.Title)}[/]"
-                : $"[bold white]{Markup.Escape(t.Title)}[/]";
+                ? $"[strike {Muted}]{Markup.Escape(t.Title)}[/]"
+                : $"[bold {Ink}]{Markup.Escape(t.Title)}[/]";
 
             var cells = new List<string>
             {
@@ -169,9 +275,9 @@ public static class ConsoleUi
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
-                .Title($"[bold {Accent}]Bạn muốn làm gì tiếp theo?[/]")
+                .Title($"[bold {Teal}]Bạn muốn làm gì tiếp theo?[/]")
                 .PageSize(choices.Length)
-                .HighlightStyle(new Style(Color.Black, Color.DeepSkyBlue1, Decoration.Bold))
+                .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
                 .AddChoices(choices));
 
         return Array.IndexOf(choices, selected) + 1;
@@ -191,7 +297,7 @@ public static class ConsoleUi
         };
         var selected = AnsiConsole.Prompt(new SelectionPrompt<string>()
             .Title("[bold]Chọn bộ lọc[/]")
-            .HighlightStyle(new Style(Color.Black, Color.DeepSkyBlue1))
+            .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
             .AddChoices(options.Keys));
         return options[selected];
     }
@@ -204,8 +310,8 @@ public static class ConsoleUi
         return AnsiConsole.Prompt(new SelectionPrompt<TaskItem>()
             .Title($"[bold]{Markup.Escape(title)}[/]")
             .PageSize(Math.Min(10, items.Count))
-            .HighlightStyle(new Style(Color.Black, Color.DeepSkyBlue1))
-            .UseConverter(t => $"{(t.IsDone ? "✓" : "○")}  {Markup.Escape(t.Title)}  [grey]• {PriorityText(t.Priority)}[/]")
+            .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
+            .UseConverter(t => $"{(t.IsDone ? "✓" : "○")}  {Markup.Escape(t.Title)}  [{Muted}]• {PriorityText(t.Priority)}[/]")
             .AddChoices(items));
     }
 
@@ -213,7 +319,7 @@ public static class ConsoleUi
     {
         if (Console.IsInputRedirected)
         {
-            AnsiConsole.MarkupLine("[grey]1. Cao   2. Trung bình   3. Thấp[/]");
+            AnsiConsole.MarkupLine($"[{Muted}]1. Cao   2. Trung bình   3. Thấp[/]");
             return InputValidator.PromptInt("Ưu tiên", 1, 3) switch
             {
                 1 => TaskPriority.High,
@@ -224,14 +330,14 @@ public static class ConsoleUi
 
         var options = new Dictionary<string, TaskPriority>
         {
-            ["[red]●[/]  Cao — cần ưu tiên xử lý"] = TaskPriority.High,
-            ["[yellow]●[/]  Trung bình"] = TaskPriority.Medium,
-            ["[cornflowerblue]●[/]  Thấp"] = TaskPriority.Low
+            [$"[{Coral}]●[/]  Cao — cần ưu tiên xử lý"] = TaskPriority.High,
+            [$"[{Gold}]●[/]  Trung bình"] = TaskPriority.Medium,
+            [$"[{Teal}]●[/]  Thấp"] = TaskPriority.Low
         };
         var currentLabel = options.First(x => x.Value == current).Key;
         var selected = AnsiConsole.Prompt(new SelectionPrompt<string>()
             .Title("[bold]Mức độ ưu tiên[/]")
-            .HighlightStyle(new Style(Color.Black, Color.DeepSkyBlue1))
+            .HighlightStyle(new Style(Color.White, TealColor, Decoration.Bold))
             .AddChoices(new[] { currentLabel }.Concat(options.Keys.Where(x => x != currentLabel))));
         return options[selected];
     }
@@ -241,26 +347,26 @@ public static class ConsoleUi
         : AnsiConsole.Confirm($"[bold yellow]{Markup.Escape(question)}[/]", defaultValue: false);
 
     public static void FormHeader(string icon, string title, string hint) =>
-        AnsiConsole.Write(new Panel(new Markup($"[grey]{Markup.Escape(hint)}[/]"))
-            .Header($"[bold {Accent}] {icon}  {Markup.Escape(title)} [/]")
+        AnsiConsole.Write(new Panel(new Markup($"[{Muted}]{Markup.Escape(hint)}[/]"))
+            .Header($"[bold {Teal}] {icon}  {Markup.Escape(title)} [/]")
             .Border(BoxBorder.Double)
-            .BorderColor(Color.DeepSkyBlue1));
+            .BorderColor(TealColor));
 
     public static void Success(string message) =>
-        AnsiConsole.Write(new Panel(new Markup($"[bold green]✓ {Markup.Escape(message)}[/]"))
-            .Border(BoxBorder.Rounded).BorderColor(Color.Green));
+        AnsiConsole.Write(new Panel(new Markup($"[bold {Green}]✓ {Markup.Escape(message)}[/]"))
+            .Border(BoxBorder.Rounded).BorderColor(GreenColor));
 
     public static void Warn(string message) =>
-        AnsiConsole.Write(new Panel(new Markup($"[yellow]⚠ {Markup.Escape(message)}[/]"))
-            .Border(BoxBorder.Rounded).BorderColor(Color.Yellow));
+        AnsiConsole.Write(new Panel(new Markup($"[{Gold}]⚠ {Markup.Escape(message)}[/]"))
+            .Border(BoxBorder.Rounded).BorderColor(GoldColor));
 
     public static void Error(string message) =>
-        AnsiConsole.MarkupLine($"[bold red]✗ {Markup.Escape(message)}[/]");
+        AnsiConsole.MarkupLine($"[bold {Coral}]✗ {Markup.Escape(message)}[/]");
 
     public static void Pause()
     {
         if (Console.IsInputRedirected) return;
-        AnsiConsole.Markup("\n[grey]Nhấn [white]Enter[/] để quay lại bảng điều khiển...[/]");
+        AnsiConsole.Markup($"\n[{Muted}]Nhấn [bold {Ink}]Enter[/] để quay lại bảng điều khiển...[/]");
         Console.ReadLine();
     }
 
@@ -274,7 +380,7 @@ public static class ConsoleUi
 
     private static bool ReadRedirectedConfirmation(string question)
     {
-        AnsiConsole.Markup($"[bold yellow]{Markup.Escape(question)}[/] [grey](y/n):[/] ");
+        AnsiConsole.Markup($"[bold {Gold}]{Markup.Escape(question)}[/] [{Muted}](y/n):[/] ");
         return ConsoleInput.ReadLine().OneLine().ToLowerInvariant() is "y" or "yes";
     }
 

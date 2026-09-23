@@ -10,6 +10,7 @@ using TodoApp.UI;
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
 Console.Title = "TODO App — 23120193";
+ConsoleUi.ApplyLightTheme();
 
 // Dependency Inversion: chỉ new interface-implementation ở composition root,
 // các lớp bên dưới chỉ nhận ITaskRepository / ITaskService.
@@ -49,8 +50,12 @@ finally
     {
         await repository.SaveAsync(service.Items, CancellationToken.None);
     }
-    catch (IOException ioEx)
+    catch (Exception saveEx) when (saveEx is IOException or UnauthorizedAccessException)
     {
-        ConsoleUi.Error($"Không lưu được file: {ioEx.Message}");
+        ConsoleUi.Error($"Không lưu được file: {saveEx.Message}");
+    }
+    finally
+    {
+        ConsoleUi.RestoreTerminalTheme();
     }
 }

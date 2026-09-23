@@ -49,6 +49,8 @@
 **TODO Desk** là ứng dụng quản lý ghi chú công việc chạy trên console. Thay vì chỉ in menu chữ và yêu cầu người dùng nhập số, chương trình sử dụng **Terminal User Interface (TUI)** để tạo trải nghiệm gần giống một ứng dụng desktop ngay trong terminal:
 
 - menu tương tác bằng phím **↑ / ↓ / Enter**;
+- light theme nền ngà với bảng màu teal, green, gold và coral;
+- logo Figlet cỡ lớn và ASCII Task-Bot được vẽ hoàn toàn bằng ký tự terminal;
 - dashboard gồm các thẻ thống kê Tổng cộng, Chưa xong, Hoàn thành và Quá hạn;
 - biểu đồ tiến độ theo tỷ lệ phần trăm;
 - bảng dữ liệu có viền, màu sắc, căn cột và trạng thái trực quan;
@@ -398,6 +400,7 @@ TODO App/
 │   │   └── TaskService.cs
 │   ├── UI/
 │   │   ├── ConsoleUi.cs
+│   │   ├── LightThemeTextWriter.cs # Giữ nền sáng sau ANSI reset
 │   │   └── MainMenu.cs
 │   └── Utils/
 │       ├── ConsoleInput.cs
@@ -768,11 +771,14 @@ priority switch
 - `Table` cho dữ liệu có cột;
 - `SelectionPrompt<T>` cho menu phím mũi tên;
 - `BreakdownChart` cho tiến độ;
+- `FigletText` cho logo lớn kiểu game terminal;
 - `Markup` và `Style` cho màu;
 - `AnsiConsole.Clear()` để refresh màn hình;
 - `Markup.Escape()` để nội dung người dùng không phá cú pháp markup.
 
 **Kiến thức học được:** console vẫn có thể có kiến trúc giao diện gồm view, component, theme và interaction. Quan trọng nhất là dữ liệu người dùng phải được escape trước khi render.
+
+Light theme còn gặp một vấn đề kỹ thuật riêng: mã ANSI `SGR 0` do thư viện phát ra có thể đưa Windows Console Host cũ về nền đen. `LightThemeTextWriter` được viết theo **Decorator pattern** để bọc `stdout`, nhận diện ANSI reset và khôi phục foreground/background mặc định mà không ghi đè màu teal/gold/coral của component. Nhờ đó giao diện nền sáng nhất quán trên cả Windows Terminal mới và Console Host cũ.
 
 Chương trình còn có fallback nhập số khi `Console.IsInputRedirected`, nhờ vậy giao diện tương tác không làm hỏng automated test hoặc kịch bản E2E.
 
